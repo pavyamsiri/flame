@@ -1,9 +1,12 @@
 from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 import numpy as np
 
 if TYPE_CHECKING:
+    from typing import Literal
+
     from optype import numpy as onp
 
 DEFAULT_SUN_X: float = -8.122
@@ -50,7 +53,12 @@ class GalactocentricFrame:
         return np.sqrt(self._sun_x**2 + self._sun_y**2 + self._sun_z**2)
 
     def gl_xyz_to_gc_xyz(
-        self, u: onp.ArrayND[np.float64], v: onp.ArrayND[np.float64], w: onp.ArrayND[np.float64]
+        self,
+        u: onp.ArrayND[np.float64],
+        v: onp.ArrayND[np.float64],
+        w: onp.ArrayND[np.float64],
+        *,
+        handedness: Literal["right", "left"] = "right",
     ) -> tuple[onp.ArrayND[np.float64], onp.ArrayND[np.float64], onp.ArrayND[np.float64]]:
         """Transform Cartesian coordinates in the Galactic frame to the Galactocentric frame.
 
@@ -62,6 +70,8 @@ class GalactocentricFrame:
             The y coordinate in the Galactic frame.
         w : Array[f64]
             The z coordinate in the Galactic frame.
+        handedness : "left" or "right"
+            The handedness of the coordinate system.
 
         Returns
         -------
@@ -79,9 +89,14 @@ class GalactocentricFrame:
         sun_r: float = np.hypot(sun_x, sun_y)
         sun_distance: float = np.hypot(sun_r, sun_z)
 
-        gc_r = -u + sun_distance
-        gc_y = v
-        gc_z = w
+        if handedness == "right":
+            gc_r = -u + sun_distance
+            gc_y = v
+            gc_z = w
+        else:
+            gc_r = -u + sun_distance
+            gc_y = -v
+            gc_z = w
 
         if np.isclose(sun_distance, 0):
             rotated_gc_r = gc_r

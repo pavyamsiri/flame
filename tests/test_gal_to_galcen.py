@@ -1,7 +1,15 @@
-from flame.galactocentric import GalactocentricFrame
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import numpy as np
 from hypothesis import given
 from hypothesis import strategies as st
+
+from flame.galactocentric import GalactocentricFrame
+
+if TYPE_CHECKING:
+    from typing import Literal
 
 
 _ABS_TOL: float = 1e-7
@@ -17,8 +25,8 @@ def random_frame(draw: st.DrawFn, *, max_value: float = 1e8) -> GalactocentricFr
     return GalactocentricFrame(sun_x=sun_x, sun_y=sun_y, sun_z=sun_z)
 
 
-@given(frame=random_frame())
-def test_center(frame: GalactocentricFrame) -> None:
+@given(frame=random_frame(), handedness=st.sampled_from(["right", "left"]))
+def test_center(frame: GalactocentricFrame, handedness: Literal["right", "left"]) -> None:
     """Check that the GC in the Galactic frame is at the origin in the Galactocentric frame."""
     target_gc_x: float = frame.distance_to_gc()
     target_gc_y: float = 0
@@ -29,25 +37,25 @@ def test_center(frame: GalactocentricFrame) -> None:
         np.array([target_gc_y], dtype=np.float64),
         np.array([target_gc_z], dtype=np.float64),
     )
-    gc_x, gc_y, gc_z = frame.gl_xyz_to_gc_xyz(gal_x, gal_y, gal_z)
+    gc_x, gc_y, gc_z = frame.gl_xyz_to_gc_xyz(gal_x, gal_y, gal_z, handedness=handedness)
 
     np.testing.assert_allclose(gc_x[0], 0, atol=_ABS_TOL)
     np.testing.assert_allclose(gc_y[0], 0, atol=_ABS_TOL)
     np.testing.assert_allclose(gc_z[0], 0, atol=_ABS_TOL)
 
 
-@given(frame=random_frame())
-def test_sun(frame: GalactocentricFrame) -> None:
+@given(frame=random_frame(), handedness=st.sampled_from(["right", "left"]))
+def test_sun(frame: GalactocentricFrame, handedness: Literal["right", "left"]) -> None:
     """Check that the Sun in the Galactic frame is at the proper coordinates in the Galactocentric frame."""
-    gc_x, gc_y, gc_z = frame.gl_xyz_to_gc_xyz(np.array([0]), np.array([0]), np.array([0]))
+    gc_x, gc_y, gc_z = frame.gl_xyz_to_gc_xyz(np.array([0]), np.array([0]), np.array([0]), handedness=handedness)
 
     np.testing.assert_allclose(gc_x[0], frame.sun_x(), atol=_ABS_TOL)
     np.testing.assert_allclose(gc_y[0], frame.sun_y(), atol=_ABS_TOL)
     np.testing.assert_allclose(gc_z[0], frame.sun_z(), atol=_ABS_TOL)
 
 
-@given(frame=random_frame())
-def test_opposing(frame: GalactocentricFrame) -> None:
+@given(frame=random_frame(), handedness=st.sampled_from(["right", "left"]))
+def test_opposing(frame: GalactocentricFrame, handedness: Literal["right", "left"]) -> None:
     """Check that points on opposing sides of the GC (collinear) mirror each other."""
     target_gc_x: float = frame.distance_to_gc()
     target_gc_y: float = 0
@@ -58,7 +66,7 @@ def test_opposing(frame: GalactocentricFrame) -> None:
         np.array([target_gc_y, target_gc_y], dtype=np.float64),
         np.array([target_gc_z, target_gc_y], dtype=np.float64),
     )
-    gc_x, gc_y, gc_z = frame.gl_xyz_to_gc_xyz(gal_x, gal_y, gal_z)
+    gc_x, gc_y, gc_z = frame.gl_xyz_to_gc_xyz(gal_x, gal_y, gal_z, handedness=handedness)
 
     np.testing.assert_allclose(gc_x[0], -gc_x[1], atol=_ABS_TOL)
     np.testing.assert_allclose(gc_y[0], -gc_y[1], atol=_ABS_TOL)
@@ -71,8 +79,11 @@ def test_opposing(frame: GalactocentricFrame) -> None:
     lon=st.floats(min_value=0, max_value=360),
     d1=st.floats(min_value=0, max_value=1e3),
     d2=st.floats(min_value=0, max_value=1e3),
+    handedness=st.sampled_from(["right", "left"]),
 )
-def test_collinear(frame: GalactocentricFrame, lat: float, lon: float, d1: float, d2: float) -> None:
+def test_collinear(
+    frame: GalactocentricFrame, lat: float, lon: float, d1: float, d2: float, handedness: Literal["right", "left"]
+) -> None:
     """Check that points with the same longitude and latitude are collinear with the Sun."""
     lat = np.radians(lat)
     lon = np.radians(lon)
