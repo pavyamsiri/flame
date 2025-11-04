@@ -49,6 +49,15 @@ class GalactocentricFrame:
     def sun_z(self) -> float:
         return self._sun_z
 
+    def sun_vx(self) -> float:
+        return self._sun_vx
+
+    def sun_vy(self) -> float:
+        return self._sun_vy
+
+    def sun_vz(self) -> float:
+        return self._sun_vz
+
     def distance_to_gc(self) -> float:
         return np.sqrt(self._sun_x**2 + self._sun_y**2 + self._sun_z**2)
 
@@ -86,17 +95,18 @@ class GalactocentricFrame:
         sun_x: float = self._sun_x
         sun_y: float = self._sun_y
         sun_z: float = self._sun_z
+        z_sgn: float = 1 if sun_z >= 0 else -1
         sun_r: float = np.hypot(sun_x, sun_y)
         sun_distance: float = np.hypot(sun_r, sun_z)
 
         if handedness == "right":
             gc_r = -u + sun_distance
-            gc_y = v
-            gc_z = w
+            gc_y = z_sgn * v
+            gc_z = z_sgn * w
         else:
             gc_r = -u + sun_distance
-            gc_y = -v
-            gc_z = w
+            gc_y = -z_sgn * v
+            gc_z = z_sgn * w
 
         if np.isclose(sun_distance, 0):
             rotated_gc_r = gc_r
@@ -120,3 +130,75 @@ class GalactocentricFrame:
             rotated_gc_y = sinl * rotated_gc_r + cosl * gc_y
 
         return (rotated_gc_x, rotated_gc_y, rotated_gc_z)
+
+    def gl_vxvyvz_to_gc_vxvyvz(
+        self,
+        v_u: onp.ArrayND[np.float64],
+        v_v: onp.ArrayND[np.float64],
+        v_w: onp.ArrayND[np.float64],
+        *,
+        handedness: Literal["right", "left"] = "right",
+    ) -> tuple[onp.ArrayND[np.float64], onp.ArrayND[np.float64], onp.ArrayND[np.float64]]:
+        """Transform Cartesian coordinates in the Galactic frame to the Galactocentric frame.
+
+        Parameters
+        ----------
+        vx : Array[f64]
+            The x-velocity in the Galactic frame.
+        vy : Array[f64]
+            The y-velocity in the Galactic frame.
+        vz : Array[f64]
+            The z-velocity in the Galactic frame.
+        handedness : "left" or "right"
+            The handedness of the coordinate system.
+
+        Returns
+        -------
+        gc_vx : Array[f64]
+            The x-velocity in the Galactocentric frame.
+        gc_vy : Array[f64]
+            The y-velocity in the Galactocentric frame.
+        gc_vz : Array[f64]
+            The z-velocity in the Galactocentric frame.
+        """
+
+        sun_x: float = self._sun_x
+        sun_y: float = self._sun_y
+        sun_z: float = self._sun_z
+        z_sgn: float = 1 if sun_z >= 0 else -1
+        sun_r: float = np.hypot(sun_x, sun_y)
+        sun_distance: float = np.hypot(sun_r, sun_z)
+        sun_vx: float = self._sun_vx
+        sun_vy: float = self._sun_vy
+        sun_vz: float = self._sun_vz
+
+        if handedness == "right":
+            gc_vr = -v_u
+            gc_vy = z_sgn * v_v
+            gc_vz = z_sgn * v_w
+        else:
+            gc_vr = -v_u
+            gc_vy = -z_sgn * v_v
+            gc_vz = z_sgn * v_w
+
+        if np.isclose(sun_distance, 0):
+            rotated_gc_vr = gc_vr
+            rotated_gc_vz = gc_vz
+        else:
+            cosb: float = sun_r / sun_distance
+            sinb: float = sun_z / sun_distance
+
+            rotated_gc_vr = cosb * gc_vr - sinb * gc_vz
+            rotated_gc_vz = sinb * gc_vr + cosb * gc_vz
+
+        if np.isclose(sun_r, 0):
+            rotated_gc_vx = rotated_gc_vr
+            rotated_gc_vy = gc_vy
+            rotated_gc_vz = rotated_gc_vz
+        else:
+            cosl: float = sun_x / sun_r
+            sinl: float = sun_y / sun_r
+
+            rotated_gc_vx = cosl * rotated_gc_vr - sinl * gc_vy
+            rotated_gc_vy = sinl * rotated_gc_vr + cosl * gc_vy
+        return (rotated_gc_vx + sun_vx, rotated_gc_vy + sun_vy, rotated_gc_vz + sun_vz)
