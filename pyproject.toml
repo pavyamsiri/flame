@@ -7,8 +7,33 @@ authors = [
     { name = "Pavadol Yamsiri", email = "pavyamsiri@gmail.com" }
 ]
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "numpy>=2.3.4",
+    "optype[numpy]>=0.14.0",
+]
 
 [build-system]
 requires = ["uv_build>=0.9.2,<0.10.0"]
 build-backend = "uv_build"
+
+[tool.pyright]
+typeCheckingMode = "strict"
+deprecateTypingAliases = true
+reportDeprecated = true
+reportMissingParameterType = true
+reportMissingTypeArgument = true
+reportUnknownArgumentType = true
+reportUnknownParameterType = true
+reportUnknownVariableType = true
+exclude = [".venv"]
+venvPath = "."
+venv = ".venv"
+
+[tool.ruff]
+line-length = 130
+
+[dependency-groups]
+dev = [
+    "hypothesis[numpy]>=6.145.1",
+    "pytest>=8.4.2",
+]
