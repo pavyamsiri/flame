@@ -1,3 +1,5 @@
+"""Routines to transform to and from the Galactocentric frame."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
