@@ -2,18 +2,22 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import polars as pl
+from optype import numpy as onp
 
 if TYPE_CHECKING:
-    from optype import numpy as onp
+    from typing import Any, TypeVar
+
+    _Shape = TypeVar("_Shape", bound=tuple[Any, ...])
+    _Float = TypeVar("_Float", bound=np.float64)
 
 
 def spherical_to_cartesian_numpy(
-    lon: onp.ArrayND[np.float64], lat: onp.ArrayND[np.float64], distance: onp.ArrayND[np.float64]
-) -> tuple[onp.ArrayND[np.float64], onp.ArrayND[np.float64], onp.ArrayND[np.float64]]:
+    lon: onp.ArrayND[_Float, _Shape], lat: onp.ArrayND[_Float, _Shape], distance: onp.ArrayND[_Float, _Shape]
+) -> tuple[onp.ArrayND[np.float64, _Shape], onp.ArrayND[np.float64, _Shape], onp.ArrayND[np.float64, _Shape]]:
     """Transform spherical coordinates to Cartesian coordinates.
 
     Parameters
@@ -40,9 +44,9 @@ def spherical_to_cartesian_numpy(
     sinb = np.sin(lat)
     cosl = np.cos(lon)
     sinl = np.sin(lon)
-    x = distance * cosb * cosl
-    y = distance * cosb * sinl
-    z = distance * sinb
+    x = cast(onp.ArrayND[np.float64, _Shape], distance * cosb * cosl)
+    y = cast(onp.ArrayND[np.float64, _Shape], distance * cosb * sinl)
+    z = cast(onp.ArrayND[np.float64, _Shape], distance * sinb)
     return (x, y, z)
 
 

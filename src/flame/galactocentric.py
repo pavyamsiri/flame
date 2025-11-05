@@ -2,22 +2,25 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 import numpy as np
 import polars as pl
 
 if TYPE_CHECKING:
-    from typing import Literal
+    from typing import Any, Literal, TypeVar
 
     from optype import numpy as onp
 
-DEFAULT_SUN_X: float = -8.122
-DEFAULT_SUN_Y: float = 0
-DEFAULT_SUN_Z: float = 0.0208
-DEFAULT_SUN_VX: float = 12.9
-DEFAULT_SUN_VY: float = 245.6
-DEFAULT_SUN_VZ: float = 7.78
+    _Shape = TypeVar("_Shape", bound=Any)
+    _Float = TypeVar("_Float", bound=np.float64)
+
+DEFAULT_SUN_X: Final[float] = -8.122
+DEFAULT_SUN_Y: Final[float] = 0
+DEFAULT_SUN_Z: Final[float] = 0.0208
+DEFAULT_SUN_VX: Final[float] = 12.9
+DEFAULT_SUN_VY: Final[float] = 245.6
+DEFAULT_SUN_VZ: Final[float] = 7.78
 
 
 class GalactocentricFrame:
@@ -66,12 +69,12 @@ class GalactocentricFrame:
 
     def gl_xyz_to_gc_xyz_numpy(
         self,
-        u: onp.ArrayND[np.float64],
-        v: onp.ArrayND[np.float64],
-        w: onp.ArrayND[np.float64],
+        u: onp.ArrayND[_Float, _Shape],
+        v: onp.ArrayND[_Float, _Shape],
+        w: onp.ArrayND[_Float, _Shape],
         *,
         handedness: Literal["right", "left"] = "right",
-    ) -> tuple[onp.ArrayND[np.float64], onp.ArrayND[np.float64], onp.ArrayND[np.float64]]:
+    ) -> tuple[onp.ArrayND[np.float64, _Shape], onp.ArrayND[np.float64, _Shape], onp.ArrayND[np.float64, _Shape]]:
         """Transform Cartesian coordinates in the Galactic frame to the Galactocentric frame.
 
         Parameters
@@ -102,12 +105,15 @@ class GalactocentricFrame:
         sun_r: float = np.hypot(sun_x, sun_y)
         sun_distance: float = np.hypot(sun_r, sun_z)
 
+        gc_r: onp.ArrayND[np.float64, _Shape]
+        gc_y: onp.ArrayND[np.float64, _Shape]
+        gc_z: onp.ArrayND[np.float64, _Shape]
         if handedness == "right":
-            gc_r = -u + sun_distance
-            gc_y = z_sgn * v
-            gc_z = z_sgn * w
+            gc_r = -u + sun_distance  # pyright: ignore[reportAssignmentType]
+            gc_y = (z_sgn * v).astype(np.float64)
+            gc_z = (z_sgn * w).astype(np.float64)
         else:
-            gc_r = -u + sun_distance
+            gc_r = -u + sun_distance  # pyright: ignore[reportAssignmentType]
             gc_y = -z_sgn * v
             gc_z = z_sgn * w
 
@@ -119,18 +125,21 @@ class GalactocentricFrame:
             sinb: float = sun_z / sun_distance
 
             rotated_gc_r = cosb * gc_r - sinb * gc_z
-            rotated_gc_z = sinb * gc_r + cosb * gc_z
+            rotated_gc_z = sinb * gc_r + cosb * gc_z  # pyright: ignore[reportAssignmentType]
 
+        rotated_gc_x: onp.ArrayND[np.float64, _Shape]
+        rotated_gc_y: onp.ArrayND[np.float64, _Shape]
+        rotated_gc_z: onp.ArrayND[np.float64, _Shape]
         if np.isclose(sun_r, 0):
-            rotated_gc_x = rotated_gc_r
+            rotated_gc_x = rotated_gc_r  # pyright: ignore[reportAssignmentType]
             rotated_gc_y = gc_y
             rotated_gc_z = rotated_gc_z
         else:
             cosl: float = sun_x / sun_r
             sinl: float = sun_y / sun_r
 
-            rotated_gc_x = cosl * rotated_gc_r - sinl * gc_y
-            rotated_gc_y = sinl * rotated_gc_r + cosl * gc_y
+            rotated_gc_x = cosl * rotated_gc_r - sinl * gc_y  # pyright: ignore[reportAssignmentType]
+            rotated_gc_y = sinl * rotated_gc_r + cosl * gc_y  # pyright: ignore[reportAssignmentType]
 
         return (rotated_gc_x, rotated_gc_y, rotated_gc_z)
 
@@ -206,12 +215,12 @@ class GalactocentricFrame:
 
     def gl_vxvyvz_to_gc_vxvyvz_numpy(
         self,
-        v_u: onp.ArrayND[np.float64],
-        v_v: onp.ArrayND[np.float64],
-        v_w: onp.ArrayND[np.float64],
+        v_u: onp.ArrayND[_Float, _Shape],
+        v_v: onp.ArrayND[_Float, _Shape],
+        v_w: onp.ArrayND[_Float, _Shape],
         *,
         handedness: Literal["right", "left"] = "right",
-    ) -> tuple[onp.ArrayND[np.float64], onp.ArrayND[np.float64], onp.ArrayND[np.float64]]:
+    ) -> tuple[onp.ArrayND[np.float64, _Shape], onp.ArrayND[np.float64, _Shape], onp.ArrayND[np.float64, _Shape]]:
         """Transform Cartesian coordinates in the Galactic frame to the Galactocentric frame.
 
         Parameters
@@ -274,7 +283,7 @@ class GalactocentricFrame:
 
             rotated_gc_vx = cosl * rotated_gc_vr - sinl * gc_vy
             rotated_gc_vy = sinl * rotated_gc_vr + cosl * gc_vy
-        return (rotated_gc_vx + sun_vx, rotated_gc_vy + sun_vy, rotated_gc_vz + sun_vz)
+        return (rotated_gc_vx + sun_vx, rotated_gc_vy + sun_vy, rotated_gc_vz + sun_vz)  # pyright: ignore[reportReturnType]
 
     def gl_vxvyvz_to_gc_vxvyvz_polars(
         self,
