@@ -101,7 +101,6 @@ class GalactocentricFrame:
         sun_x: float = self._sun_x
         sun_y: float = self._sun_y
         sun_z: float = self._sun_z
-        z_sgn: float = 1 if sun_z >= 0 else -1
         sun_r: float = np.hypot(sun_x, sun_y)
         sun_distance: float = np.hypot(sun_r, sun_z)
 
@@ -110,12 +109,12 @@ class GalactocentricFrame:
         gc_z: onp.ArrayND[np.float64, _Shape]
         if handedness == "right":
             gc_r = -u + sun_distance  # pyright: ignore[reportAssignmentType]
-            gc_y = (z_sgn * v).astype(np.float64)
-            gc_z = (z_sgn * w).astype(np.float64)
+            gc_y = v.astype(np.float64)
+            gc_z = w.astype(np.float64)
         else:
             gc_r = -u + sun_distance  # pyright: ignore[reportAssignmentType]
-            gc_y = -z_sgn * v
-            gc_z = z_sgn * w
+            gc_y = -v
+            gc_z = w
 
         if np.isclose(sun_distance, 0):
             rotated_gc_r = gc_r
@@ -177,18 +176,17 @@ class GalactocentricFrame:
         sun_x: float = self._sun_x
         sun_y: float = self._sun_y
         sun_z: float = self._sun_z
-        z_sgn: float = 1 if sun_z >= 0 else -1
         sun_r: float = np.hypot(sun_x, sun_y)
         sun_distance: float = np.hypot(sun_r, sun_z)
 
         if handedness == "right":
             gc_r = -u + sun_distance
-            gc_y = z_sgn * v
-            gc_z = z_sgn * w
+            gc_y = v
+            gc_z = w
         else:
             gc_r = -u + sun_distance
-            gc_y = -z_sgn * v
-            gc_z = z_sgn * w
+            gc_y = -v
+            gc_z = w
 
         if np.isclose(sun_distance, 0):
             rotated_gc_r = gc_r
@@ -247,7 +245,6 @@ class GalactocentricFrame:
         sun_x: float = self._sun_x
         sun_y: float = self._sun_y
         sun_z: float = self._sun_z
-        z_sgn: float = 1 if sun_z >= 0 else -1
         sun_r: float = np.hypot(sun_x, sun_y)
         sun_distance: float = np.hypot(sun_r, sun_z)
         sun_vx: float = self._sun_vx
@@ -256,12 +253,12 @@ class GalactocentricFrame:
 
         if handedness == "right":
             gc_vr = -v_u
-            gc_vy = z_sgn * v_v
-            gc_vz = z_sgn * v_w
+            gc_vy = v_v
+            gc_vz = v_w
         else:
             gc_vr = -v_u
-            gc_vy = -z_sgn * v_v
-            gc_vz = z_sgn * v_w
+            gc_vy = -v_v
+            gc_vz = v_w
 
         if np.isclose(sun_distance, 0):
             rotated_gc_vr = gc_vr
@@ -320,7 +317,6 @@ class GalactocentricFrame:
         sun_x: float = self._sun_x
         sun_y: float = self._sun_y
         sun_z: float = self._sun_z
-        z_sgn: float = 1 if sun_z >= 0 else -1
         sun_r: float = np.hypot(sun_x, sun_y)
         sun_distance: float = np.hypot(sun_r, sun_z)
         sun_vx: float = self._sun_vx
@@ -329,12 +325,12 @@ class GalactocentricFrame:
 
         if handedness == "right":
             gc_vr = -v_u
-            gc_vy = z_sgn * v_v
-            gc_vz = z_sgn * v_w
+            gc_vy = v_v
+            gc_vz = v_w
         else:
             gc_vr = -v_u
-            gc_vy = -z_sgn * v_v
-            gc_vz = z_sgn * v_w
+            gc_vy = -v_v
+            gc_vz = v_w
 
         if np.isclose(sun_distance, 0):
             rotated_gc_vr = gc_vr
