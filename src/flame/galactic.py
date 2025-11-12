@@ -63,13 +63,13 @@ def vrpmllpmbb_to_vxvyvz_numpy(
     cosb = np.cos(lat)
 
     rotation_0_0 = cosl * cosb
-    rotation_0_1 = sinl * cosb
-    rotation_0_2 = sinb
-    rotation_1_0 = -sinl
+    rotation_1_0 = sinl * cosb
+    rotation_2_0 = sinb
+    rotation_0_1 = -sinl
     rotation_1_1 = cosl
-    rotation_1_2 = 0
-    rotation_2_0 = -cosl * sinb
-    rotation_2_1 = -sinl * sinb
+    rotation_2_1 = 0
+    rotation_0_2 = -cosl * sinb
+    rotation_1_2 = -sinl * sinb
     rotation_2_2 = cosb
 
     v0 = vr
@@ -132,13 +132,13 @@ def vrpmllpmbb_to_vxvyvz_polars(
     cosb = lat.cos()
 
     rotation_0_0 = cosl * cosb
-    rotation_0_1 = sinl * cosb
-    rotation_0_2 = sinb
-    rotation_1_0 = -sinl
+    rotation_1_0 = sinl * cosb
+    rotation_2_0 = sinb
+    rotation_0_1 = -sinl
     rotation_1_1 = cosl
-    rotation_1_2 = 0
-    rotation_2_0 = -cosl * sinb
-    rotation_2_1 = -sinl * sinb
+    rotation_2_1 = 0
+    rotation_0_2 = -cosl * sinb
+    rotation_1_2 = -sinl * sinb
     rotation_2_2 = cosb
 
     v0 = vr
