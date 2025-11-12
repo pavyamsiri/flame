@@ -147,10 +147,10 @@ def pmrapmdec_to_pmllpmbb_numpy(
     sinphi /= norm
 
     pmll: onp.ArrayND[np.float64, _Shape] = cast(
-        onp.ArrayND[np.float64, _Shape], (cosphi * pmracosdec - sinphi * pmdec).astype(np.float64)
+        onp.ArrayND[np.float64, _Shape], (cosphi * pmracosdec + sinphi * pmdec).astype(np.float64)
     )
     pmbb: onp.ArrayND[np.float64, _Shape] = cast(
-        onp.ArrayND[np.float64, _Shape], (sinphi * pmracosdec + cosphi * pmdec).astype(np.float64)
+        onp.ArrayND[np.float64, _Shape], (-sinphi * pmracosdec + cosphi * pmdec).astype(np.float64)
     )
 
     return (pmll, pmbb)
@@ -198,8 +198,8 @@ def pmrapmdec_to_pmllpmbb_polars(
     cosphi /= norm
     sinphi /= norm
 
-    pmll = cosphi * pmracosdec - sinphi * pmdec
-    pmbb = sinphi * pmracosdec + cosphi * pmdec
+    pmll = cosphi * pmracosdec + sinphi * pmdec
+    pmbb = -sinphi * pmracosdec + cosphi * pmdec
     return (pmll, pmbb)
 
 
