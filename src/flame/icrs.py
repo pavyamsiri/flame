@@ -2,18 +2,17 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, TypeVar, cast, Any
 
 import numpy as np
 import polars as pl
-
 from optype import numpy as onp
 
 if TYPE_CHECKING:
-    from typing import TypeVar, Any, Final
+    from typing import Final
 
-    _Shape = TypeVar("_Shape", bound=Any)
-    _Float = TypeVar("_Float", bound=np.float64)
+_Shape = TypeVar("_Shape", bound=tuple[Any, ...])
+_Float = TypeVar("_Float", bound=np.float64)
 
 
 # These constants were obtained from galpy's `get_epoch_angles`.
@@ -102,6 +101,106 @@ def radec_to_lb_polars(
     lon = pl.arctan2(gl_y / lat.cos(), gl_x / lat.cos())
     lon = pl.when(lon < 0.0).then(lon + 2 * np.pi).otherwise(lon)
     return (lon, lat)
+
+
+def pmrapmdec_to_pmllpmbb_numpy(
+    pmracosdec: onp.ArrayND[_Float, _Shape],
+    pmdec: onp.ArrayND[_Float, _Shape],
+    *,
+    ra: onp.ArrayND[_Float, _Shape],
+    dec: onp.ArrayND[_Float, _Shape],
+) -> tuple[onp.ArrayND[np.float64, _Shape], onp.ArrayND[np.float64, _Shape]]:
+    """Transform from equatorial ICRS proper motions to Galactic proper motions.
+
+    Parameters
+    ----------
+    pmracosdec : Array[float]
+        The proper motion in right ascension corrected by cos(dec) in mas/yr.
+    pmdec : Array[float]
+        The proper motion in declination in mas/yr.
+    ra : Array[float]
+        The right ascension in radians.
+    dec : Array[float]
+        The declination in radians.
+
+    Returns
+    -------
+    pmll : Array[float]
+        The proper motion in longitude corrected by cos(b) in mas/yr.
+    pmbb : Array[float]
+        The proper motion in latitude in mas/yr.
+
+    """
+    treated_dec = np.copy(dec).astype(np.float64)
+    # Add epsilon to handle pole
+    treated_dec[treated_dec == DEC_NGP] += 1e-16
+    sindec_ngp: float = np.sin(DEC_NGP)
+    cosdec_ngp: float = np.cos(DEC_NGP)
+    sindec = np.sin(treated_dec)
+    cosdec = np.cos(treated_dec)
+    sinrarangp = np.sin(ra - RA_NGP)
+    cosrarangp = np.cos(ra - RA_NGP)
+    cosphi = sindec_ngp * cosdec - cosdec_ngp * sindec * cosrarangp
+    sinphi = sinrarangp * cosdec_ngp
+    norm = np.sqrt(cosphi**2.0 + sinphi**2.0)
+    cosphi /= norm
+    sinphi /= norm
+
+    pmll: onp.ArrayND[np.float64, _Shape] = cast(
+        onp.ArrayND[np.float64, _Shape], (cosphi * pmracosdec - sinphi * pmdec).astype(np.float64)
+    )
+    pmbb: onp.ArrayND[np.float64, _Shape] = cast(
+        onp.ArrayND[np.float64, _Shape], (sinphi * pmracosdec + cosphi * pmdec).astype(np.float64)
+    )
+
+    return (pmll, pmbb)
+
+
+def pmrapmdec_to_pmllpmbb_polars(
+    pmracosdec: pl.Expr,
+    pmdec: pl.Expr,
+    *,
+    ra: pl.Expr,
+    dec: pl.Expr,
+) -> tuple[pl.Expr, pl.Expr]:
+    """Transform from equatorial ICRS proper motions to Galactic proper motions.
+
+    Parameters
+    ----------
+    pmracosdec : pl.Expr
+        The proper motion in right ascension corrected by cos(dec) in mas/yr.
+    pmdec : pl.Expr
+        The proper motion in declination in mas/yr.
+    ra : pl.Expr
+        The right ascension in radians.
+    dec : pl.Expr
+        The declination in radians.
+
+    Returns
+    -------
+    pmll : pl.Expr
+        The proper motion in longitude corrected by cos(b) in mas/yr.
+    pmbb : pl.Expr
+        The proper motion in latitude in mas/yr.
+
+    """
+    # Add epsilon to handle pole
+    treated_dec = pl.when(dec == DEC_NGP).then(dec + 1e-16).otherwise(dec)
+    sindec_ngp: float = np.sin(DEC_NGP)
+    cosdec_ngp: float = np.cos(DEC_NGP)
+    sindec = treated_dec.sin()
+    cosdec = treated_dec.cos()
+    sinrarangp = (ra - RA_NGP).sin()
+    cosrarangp = (ra - RA_NGP).cos()
+    cosphi = sindec_ngp * cosdec - cosdec_ngp * sindec * cosrarangp
+    sinphi = sinrarangp * cosdec_ngp
+    norm = (cosphi**2.0 + sinphi**2.0).sqrt()
+    cosphi /= norm
+    sinphi /= norm
+
+    pmll = cosphi * pmracosdec - sinphi * pmdec
+    pmbb = sinphi * pmracosdec + cosphi * pmdec
+    return (pmll, pmbb)
 
 
 def _get_transformation_matrix() -> onp.Array2D[np.float64]:
