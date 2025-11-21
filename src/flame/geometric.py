@@ -2,17 +2,14 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+from typing import Any, TypeVar, cast
 
 import numpy as np
 import polars as pl
 from optype import numpy as onp
 
-if TYPE_CHECKING:
-    from typing import Any, TypeVar
-
-    _Shape = TypeVar("_Shape", bound=tuple[Any, ...])
-    _Float = TypeVar("_Float", bound=np.float64)
+_Shape = TypeVar("_Shape", bound=tuple[Any, ...])
+_Float = TypeVar("_Float", bound=np.float64)
 
 
 def spherical_to_cartesian_numpy(
