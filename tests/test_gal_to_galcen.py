@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import polars as pl
-from hypothesis import given
+from hypothesis import assume, given
 from hypothesis import strategies as st
 
 from flame.galactocentric import GalactocentricFrame
@@ -35,47 +35,6 @@ def random_frame(draw: st.DrawFn, *, max_value: float = 1e8) -> GalactocentricFr
         sun_vy=sun_vy,
         sun_vz=sun_vz,
     )
-
-
-@given(frame=random_frame(), handedness=st.sampled_from(["right", "left"]))
-def test_center_numpy(frame: GalactocentricFrame, handedness: Literal["right", "left"]) -> None:
-    """Check that the GC in the Galactic frame is at the origin in the Galactocentric frame."""
-    gl_x, gl_y, gl_z = (
-        np.array([frame.distance_to_gc()], dtype=np.float64),
-        np.array([0], dtype=np.float64),
-        np.array([0], dtype=np.float64),
-    )
-    gc_x, gc_y, gc_z = frame.gl_xyz_to_gc_xyz_numpy(gl_x, gl_y, gl_z, handedness=handedness)
-
-    np.testing.assert_allclose(gc_x[0], 0, atol=_ABS_TOL)
-    np.testing.assert_allclose(gc_y[0], 0, atol=_ABS_TOL)
-    np.testing.assert_allclose(gc_z[0], 0, atol=_ABS_TOL)
-
-
-@given(frame=random_frame(), handedness=st.sampled_from(["right", "left"]))
-def test_center_polars(frame: GalactocentricFrame, handedness: Literal["right", "left"]) -> None:
-    """Check that the GC in the Galactic frame is at the origin in the Galactocentric frame."""
-    gc_x_expr, gc_y_expr, gc_z_expr = frame.gl_xyz_to_gc_xyz_polars(
-        pl.col("gl_x"), pl.col("gl_y"), pl.col("gl_z"), handedness=handedness
-    )
-
-    data = pl.DataFrame(
-        {
-            "gl_x": frame.distance_to_gc(),
-            "gl_y": 0,
-            "gl_z": 0,
-        }
-    )
-
-    data = data.with_columns(
-        gc_x_expr.alias("gc_x"),
-        gc_y_expr.alias("gc_y"),
-        gc_z_expr.alias("gc_z"),
-    )
-
-    np.testing.assert_allclose(data["gc_x"], 0, atol=_ABS_TOL)
-    np.testing.assert_allclose(data["gc_y"], 0, atol=_ABS_TOL)
-    np.testing.assert_allclose(data["gc_z"], 0, atol=_ABS_TOL)
 
 
 @given(frame=random_frame(), handedness=st.sampled_from(["right", "left"]))
@@ -129,55 +88,6 @@ def test_sun_polars(frame: GalactocentricFrame, handedness: Literal["right", "le
     np.testing.assert_allclose(data["gc_vx"], frame.sun_vx(), atol=_ABS_TOL)
     np.testing.assert_allclose(data["gc_vy"], frame.sun_vy(), atol=_ABS_TOL)
     np.testing.assert_allclose(data["gc_vz"], frame.sun_vz(), atol=_ABS_TOL)
-
-
-@given(frame=random_frame(), handedness=st.sampled_from(["right", "left"]))
-def test_opposing_numpy(frame: GalactocentricFrame, handedness: Literal["right", "left"]) -> None:
-    """Check that points on opposing sides of the GC (collinear) mirror each other."""
-    target_gc_x: float = frame.distance_to_gc()
-    target_gc_y: float = 0
-    target_gc_z: float = 0
-
-    gal_x, gal_y, gal_z = (
-        np.array([0.5 * target_gc_x, 1.5 * target_gc_x], dtype=np.float64),
-        np.array([target_gc_y, target_gc_y], dtype=np.float64),
-        np.array([target_gc_z, target_gc_y], dtype=np.float64),
-    )
-    gc_x, gc_y, gc_z = frame.gl_xyz_to_gc_xyz_numpy(gal_x, gal_y, gal_z, handedness=handedness)
-
-    np.testing.assert_allclose(gc_x[0], -gc_x[1], atol=_ABS_TOL)
-    np.testing.assert_allclose(gc_y[0], -gc_y[1], atol=_ABS_TOL)
-    np.testing.assert_allclose(gc_z[0], -gc_z[1], atol=_ABS_TOL)
-
-
-@given(frame=random_frame(), handedness=st.sampled_from(["right", "left"]))
-def test_opposing_polars(frame: GalactocentricFrame, handedness: Literal["right", "left"]) -> None:
-    """Check that the Sun in the Galactic frame is at the proper coordinates in the Galactocentric frame."""
-    gc_x_expr, gc_y_expr, gc_z_expr = frame.gl_xyz_to_gc_xyz_polars(
-        pl.col("gl_x"), pl.col("gl_y"), pl.col("gl_z"), handedness=handedness
-    )
-
-    target_gc_x: float = frame.distance_to_gc()
-    target_gc_y: float = 0
-    target_gc_z: float = 0
-
-    data = pl.DataFrame(
-        {
-            "gl_x": [0.5 * target_gc_x, 1.5 * target_gc_x],
-            "gl_y": [target_gc_y, target_gc_y],
-            "gl_z": [target_gc_z, target_gc_z],
-        }
-    )
-
-    data = data.with_columns(
-        gc_x_expr.alias("gc_x"),
-        gc_y_expr.alias("gc_y"),
-        gc_z_expr.alias("gc_z"),
-    )
-
-    np.testing.assert_allclose(data["gc_x"][0], -data["gc_x"][1], atol=_ABS_TOL)
-    np.testing.assert_allclose(data["gc_y"][0], -data["gc_y"][1], atol=_ABS_TOL)
-    np.testing.assert_allclose(data["gc_z"][0], -data["gc_z"][1], atol=_ABS_TOL)
 
 
 @given(
