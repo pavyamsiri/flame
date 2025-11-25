@@ -37,6 +37,150 @@ def random_frame(draw: st.DrawFn, *, max_value: float = 1e8) -> GalactocentricFr
     )
 
 
+@given(
+    frame=random_frame(),
+    u=st.floats(min_value=-1e8, max_value=1e8, allow_infinity=False, allow_nan=False),
+    v=st.floats(min_value=-1e8, max_value=1e8, allow_infinity=False, allow_nan=False),
+    w=st.floats(min_value=-1e8, max_value=1e8, allow_infinity=False, allow_nan=False),
+    handedness=st.sampled_from(["right", "left"]),
+)
+def test_gl_xyz_to_gc_xyz(frame: GalactocentricFrame, u: float, v: float, w: float, handedness: Literal["right", "left"]) -> None:
+    gl_x = np.full(1, u)
+    gl_y = np.full(1, v)
+    gl_z = np.full(1, w)
+    data = pl.DataFrame(
+        {
+            "gl_x": gl_x,
+            "gl_y": gl_y,
+            "gl_z": gl_z,
+        }
+    )
+
+    np_x, np_y, np_z = frame.gl_xyz_to_gc_xyz_numpy(gl_x, gl_y, gl_z, handedness=handedness)
+    pl_x_expr, pl_y_expr, pl_z_expr = frame.gl_xyz_to_gc_xyz_polars(
+        pl.col("gl_x"), pl.col("gl_y"), pl.col("gl_z"), handedness=handedness
+    )
+
+    data = data.with_columns(
+        pl_x_expr.alias("gc_x"),
+        pl_y_expr.alias("gc_y"),
+        pl_z_expr.alias("gc_z"),
+    )
+
+    np.testing.assert_allclose(data["gc_x"], np_x, atol=_ABS_TOL)
+    np.testing.assert_allclose(data["gc_y"], np_y, atol=_ABS_TOL)
+    np.testing.assert_allclose(data["gc_z"], np_z, atol=_ABS_TOL)
+
+
+@given(
+    frame=random_frame(),
+    x=st.floats(min_value=-1e8, max_value=1e8, allow_infinity=False, allow_nan=False),
+    y=st.floats(min_value=-1e8, max_value=1e8, allow_infinity=False, allow_nan=False),
+    z=st.floats(min_value=-1e8, max_value=1e8, allow_infinity=False, allow_nan=False),
+    handedness=st.sampled_from(["right", "left"]),
+)
+def test_gc_xyz_to_gl_xyz(frame: GalactocentricFrame, x: float, y: float, z: float, handedness: Literal["right", "left"]) -> None:
+    gc_x = np.full(1, x)
+    gc_y = np.full(1, y)
+    gc_z = np.full(1, z)
+    data = pl.DataFrame(
+        {
+            "gc_x": gc_x,
+            "gc_y": gc_y,
+            "gc_z": gc_z,
+        }
+    )
+
+    np_x, np_y, np_z = frame.gc_xyz_to_gl_xyz_numpy(gc_x, gc_y, gc_z, handedness=handedness)
+    pl_x_expr, pl_y_expr, pl_z_expr = frame.gc_xyz_to_gl_xyz_polars(
+        pl.col("gc_x"), pl.col("gc_y"), pl.col("gc_z"), handedness=handedness
+    )
+
+    data = data.with_columns(
+        pl_x_expr.alias("gl_x"),
+        pl_y_expr.alias("gl_y"),
+        pl_z_expr.alias("gl_z"),
+    )
+
+    np.testing.assert_allclose(data["gl_x"], np_x, atol=_ABS_TOL)
+    np.testing.assert_allclose(data["gl_y"], np_y, atol=_ABS_TOL)
+    np.testing.assert_allclose(data["gl_z"], np_z, atol=_ABS_TOL)
+
+
+@given(
+    frame=random_frame(),
+    v_u=st.floats(min_value=-1e8, max_value=1e8, allow_infinity=False, allow_nan=False),
+    v_v=st.floats(min_value=-1e8, max_value=1e8, allow_infinity=False, allow_nan=False),
+    v_w=st.floats(min_value=-1e8, max_value=1e8, allow_infinity=False, allow_nan=False),
+    handedness=st.sampled_from(["right", "left"]),
+)
+def test_gl_vxvyvz_to_gc_vxvyvz(
+    frame: GalactocentricFrame, v_u: float, v_v: float, v_w: float, handedness: Literal["right", "left"]
+) -> None:
+    gl_vx = np.full(1, v_u)
+    gl_vy = np.full(1, v_v)
+    gl_vz = np.full(1, v_w)
+    data = pl.DataFrame(
+        {
+            "gl_vx": gl_vx,
+            "gl_vy": gl_vy,
+            "gl_vz": gl_vz,
+        }
+    )
+
+    np_vx, np_vy, np_vz = frame.gl_vxvyvz_to_gc_vxvyvz_numpy(gl_vx, gl_vy, gl_vz, handedness=handedness)
+    pl_vx_expr, pl_vy_expr, pl_vz_expr = frame.gl_vxvyvz_to_gc_vxvyvz_polars(
+        pl.col("gl_vx"), pl.col("gl_vy"), pl.col("gl_vz"), handedness=handedness
+    )
+
+    data = data.with_columns(
+        pl_vx_expr.alias("gc_vx"),
+        pl_vy_expr.alias("gc_vy"),
+        pl_vz_expr.alias("gc_vz"),
+    )
+
+    np.testing.assert_allclose(data["gc_vx"], np_vx, atol=_ABS_TOL)
+    np.testing.assert_allclose(data["gc_vy"], np_vy, atol=_ABS_TOL)
+    np.testing.assert_allclose(data["gc_vz"], np_vz, atol=_ABS_TOL)
+
+
+@given(
+    frame=random_frame(),
+    vx=st.floats(min_value=-1e8, max_value=1e8, allow_infinity=False, allow_nan=False),
+    vy=st.floats(min_value=-1e8, max_value=1e8, allow_infinity=False, allow_nan=False),
+    vz=st.floats(min_value=-1e8, max_value=1e8, allow_infinity=False, allow_nan=False),
+    handedness=st.sampled_from(["right", "left"]),
+)
+def test_gc_vxvyvz_to_gl_vxvyvz(
+    frame: GalactocentricFrame, vx: float, vy: float, vz: float, handedness: Literal["right", "left"]
+) -> None:
+    gc_vx = np.full(1, vx)
+    gc_vy = np.full(1, vy)
+    gc_vz = np.full(1, vz)
+    data = pl.DataFrame(
+        {
+            "gc_vx": gc_vx,
+            "gc_vy": gc_vy,
+            "gc_vz": gc_vz,
+        }
+    )
+
+    np_vx, np_vy, np_vz = frame.gc_vxvyvz_to_gl_vxvyvz_numpy(gc_vx, gc_vy, gc_vz, handedness=handedness)
+    pl_vx_expr, pl_vy_expr, pl_vz_expr = frame.gc_vxvyvz_to_gl_vxvyvz_polars(
+        pl.col("gc_vx"), pl.col("gc_vy"), pl.col("gc_vz"), handedness=handedness
+    )
+
+    data = data.with_columns(
+        pl_vx_expr.alias("gl_vx"),
+        pl_vy_expr.alias("gl_vy"),
+        pl_vz_expr.alias("gl_vz"),
+    )
+
+    np.testing.assert_allclose(data["gl_vx"], np_vx, atol=_ABS_TOL)
+    np.testing.assert_allclose(data["gl_vy"], np_vy, atol=_ABS_TOL)
+    np.testing.assert_allclose(data["gl_vz"], np_vz, atol=_ABS_TOL)
+
+
 @given(frame=random_frame(), handedness=st.sampled_from(["right", "left"]))
 def test_sun_numpy(frame: GalactocentricFrame, handedness: Literal["right", "left"]) -> None:
     """Check that the Sun in the Galactic frame is at the proper coordinates in the Galactocentric frame."""

@@ -28,7 +28,8 @@ GALCEN_EXTRA_ROT: Final[onp.Array2D[np.float64]] = np.array(
         [1.00000000e00, 9.30225997e-07, -1.43136054e-06],
         [-9.30228099e-07, 1.00000000e00, -1.46880340e-06],
         [1.43135917e-06, 1.46880473e-06, 1.00000000e00],
-    ]
+    ],
+    dtype=np.float64,
 )
 
 
@@ -290,6 +291,47 @@ class GalactocentricFrame:
 
         return (gc_x, gc_y, gc_z)
 
+    def gc_xyz_to_gl_xyz_polars(
+        self,
+        x: pl.Expr,
+        y: pl.Expr,
+        z: pl.Expr,
+        *,
+        handedness: Literal["right", "left"] = "right",
+    ) -> tuple[pl.Expr, pl.Expr, pl.Expr]:
+        """Transform Cartesian coordinates in the Galactocentric frame to the Galactic frame.
+
+        Parameters
+        ----------
+        x : pl.Expr
+            The x coordinate in the Galactocentric frame.
+        y : pl.Expr
+            The y coordinate in the Galactocentric frame.
+        z : pl.Expr
+            The z coordinate in the Galactocentric frame.
+        handedness : "left" or "right"
+            The handedness of the coordinate system.
+
+        Returns
+        -------
+        gl_x : pl.Expr
+            The x coordinate in the Galactic frame.
+        gl_y : pl.Expr
+            The y coordinate in the Galactic frame.
+        gl_z : pl.Expr
+            The z coordinate in the Galactic frame.
+        """
+        _ = handedness
+
+        transform = self._transforms.pos_matrix_inv
+        translation = self._transforms.pos_translation_inv
+
+        gl_x = transform[0, 0] * x + transform[0, 1] * y + transform[0, 2] * z + translation[0]
+        gl_y = transform[1, 0] * x + transform[1, 1] * y + transform[1, 2] * z + translation[1]
+        gl_z = transform[2, 0] * x + transform[2, 1] * y + transform[2, 2] * z + translation[2]
+
+        return (gl_x, gl_y, gl_z)
+
     def gl_vxvyvz_to_gc_vxvyvz_numpy(
         self,
         v_u: onp.ArrayND[_Float, _Shape],
@@ -330,6 +372,47 @@ class GalactocentricFrame:
         gc_z = transform[2, 0] * v_u + transform[2, 1] * v_v + transform[2, 2] * v_w + translation[2]
 
         return (gc_x, gc_y, gc_z)
+
+    def gc_vxvyvz_to_gl_vxvyvz_numpy(
+        self,
+        vx: onp.ArrayND[_Float, _Shape],
+        vy: onp.ArrayND[_Float, _Shape],
+        vz: onp.ArrayND[_Float, _Shape],
+        *,
+        handedness: Literal["right", "left"] = "right",
+    ) -> tuple[onp.ArrayND[np.float64, _Shape], onp.ArrayND[np.float64, _Shape], onp.ArrayND[np.float64, _Shape]]:
+        """Transform Cartesian velocities in the Galactocentric frame to the Galactic frame.
+
+        Parameters
+        ----------
+        vx : Array[f64]
+            The x-velocity in the Galactocentric frame.
+        vy : Array[f64]
+            The y-velocity in the Galactocentric frame.
+        vz : Array[f64]
+            The z-velocity in the Galactocentric frame.
+        handedness : "left" or "right"
+            The handedness of the coordinate system.
+
+        Returns
+        -------
+        gl_vx : Array[f64]
+            The x-velocity in the Galactic frame.
+        gl_vy : Array[f64]
+            The y-velocity in the Galactic frame.
+        gl_vz : Array[f64]
+            The z-velocity in the Galactic frame.
+        """
+        _ = handedness
+
+        transform = self._transforms.vel_matrix_inv
+        translation = self._transforms.vel_translation_inv
+
+        gl_x = transform[0, 0] * vx + transform[0, 1] * vy + transform[0, 2] * vz + translation[0]
+        gl_y = transform[1, 0] * vx + transform[1, 1] * vy + transform[1, 2] * vz + translation[1]
+        gl_z = transform[2, 0] * vx + transform[2, 1] * vy + transform[2, 2] * vz + translation[2]
+
+        return (gl_x, gl_y, gl_z)
 
     def gl_vxvyvz_to_gc_vxvyvz_polars(
         self,
@@ -372,6 +455,47 @@ class GalactocentricFrame:
         gc_z = transform[2, 0] * v_u + transform[2, 1] * v_v + transform[2, 2] * v_w + translation[2]
 
         return (gc_x, gc_y, gc_z)
+
+    def gc_vxvyvz_to_gl_vxvyvz_polars(
+        self,
+        vx: pl.Expr,
+        vy: pl.Expr,
+        vz: pl.Expr,
+        *,
+        handedness: Literal["right", "left"] = "right",
+    ) -> tuple[pl.Expr, pl.Expr, pl.Expr]:
+        """Transform Cartesian velocities in the Galactocentric frame to the Galactic frame.
+
+        Parameters
+        ----------
+        vx : pl.Expr
+            The x-velocity in the Galactocentric frame.
+        vy : pl.Expr
+            The y-velocity in the Galactocentric frame.
+        vz : pl.Expr
+            The z-velocity in the Galactocentric frame.
+        handedness : "left" or "right"
+            The handedness of the coordinate system.
+
+        Returns
+        -------
+        gl_vx : pl.Expr
+            The x-velocity in the Galactic frame.
+        gl_vy : pl.Expr
+            The y-velocity in the Galactic frame.
+        gl_vz : pl.Expr
+            The z-velocity in the Galactic frame.
+        """
+        _ = handedness
+
+        transform = self._transforms.vel_matrix_inv
+        translation = self._transforms.vel_translation_inv
+
+        gl_x = transform[0, 0] * vx + transform[0, 1] * vy + transform[0, 2] * vz + translation[0]
+        gl_y = transform[1, 0] * vx + transform[1, 1] * vy + transform[1, 2] * vz + translation[1]
+        gl_z = transform[2, 0] * vx + transform[2, 1] * vy + transform[2, 2] * vz + translation[2]
+
+        return (gl_x, gl_y, gl_z)
 
 
 if __name__ == "__main__":
