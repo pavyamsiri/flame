@@ -28,11 +28,11 @@ def test_vrpmllpmbb_to_vxvyvz(vr: float, pmll: float, pmbb: float, lon: float, l
         }
     )
 
-    vx, vy, vz = vrpmllpmbb_to_vxvyvz_polars(
+    vx_expr, vy_expr, vz_expr = vrpmllpmbb_to_vxvyvz_polars(
         pl.col("vr"), pl.col("pmll"), pl.col("pmbb"), pl.col("lon"), pl.col("lat"), pl.col("distance")
     )
 
-    data = data.with_columns((vx.alias("vx"), vy.alias("vy"), vz.alias("vz")))
+    data = data.with_columns((vx_expr.alias("vx"), vy_expr.alias("vy"), vz_expr.alias("vz")))
     vr_arr = np.array([vr], dtype=np.float64)
     pmll_arr = np.array([pmll * np.cos(lat)], dtype=np.float64)
     pmbb_arr = np.array([pmbb], dtype=np.float64)
