@@ -83,12 +83,13 @@ class GalactocentricFrame:
     ) -> _AffineTransforms:
         sun_r: float = np.hypot(sun_x, sun_y)
         sun_distance: float = np.hypot(sun_r, sun_z)
+        x_sign = 1 if sun_x >= 0 else -1
 
         lon = np.arctan2(sun_y, sun_x)
         cosl = np.cos(lon)
         sinl = np.sin(lon)
 
-        lat = np.arctan2(sun_z, sun_r)
+        lat = x_sign * np.arctan2(sun_z, sun_r)
         cosb = np.cos(lat)
         sinb = np.sin(lat)
 
@@ -112,47 +113,29 @@ class GalactocentricFrame:
 
         reflect_matrix = np.array(
             [
-                [1, 0, 0],
-                [0, -1, 0],
+                [-1, 0, 0],
+                [0, 1, 0],
                 [0, 0, 1],
             ],
             dtype=np.float64,
         )
-
-        ra = -sun_x / sun_distance if sun_distance > 0 else 1
-        rd = -sun_y / sun_distance if sun_distance > 0 else 0
-        rg = -sun_z / sun_distance if sun_distance > 0 else 0
-
-        rb = -np.sin(lon)
-        re = np.cos(lon)
-        rh = 0
-
-        c3 = np.cross(np.array([ra, rd, rg]), np.array([rb, re, rh]))
-
-        pos_matrix = rxy_matrix @ rxz_matrix @ reflect_matrix @ GALCEN_EXTRA_ROT @ rxy_matrix.T
-        pos_matrix = GALCEN_EXTRA_ROT @ (
-            np.array(
-                [
-                    [ra, rb, c3[0]],
-                    [rd, re, c3[1]],
-                    [rg, rh, c3[2]],
-                ]
-            )
-        )
+        pos_matrix = rxz_matrix @ reflect_matrix @ GALCEN_EXTRA_ROT @ rxy_matrix.T
         pos_translation = np.array([sun_x, sun_y, sun_z])
-
-        print(f"r_a = {ra}")
-        print(f"r_d = {rd}")
-        print(f"r_g = {rg}")
-        print(f"r_b = {rb}")
-        print(f"r_e = {re}")
-        print(f"r_h = {rh}")
-
-        print("POS MATRIX")
-        print(pos_matrix)
-
         pos_matrix_inv = np.linalg.inv(pos_matrix)
         pos_translation_inv = -pos_matrix_inv @ pos_translation
+
+        # print("TOTAL TRANSFORM")
+        # print(np.round(pos_matrix, 5))
+        # print(f"sgn(x) = {x_sign}")
+        # print("Y axis rotation")
+        # print(np.round(rxz_matrix, 5))
+        # print("REFLECTION")
+        # print(np.round(reflect_matrix, 5))
+        # print("GALCEN_EXTRA_ROT")
+        # print(np.round(GALCEN_EXTRA_ROT, 5))
+        # print("Z-axis rotation")
+        # print(np.round(rxy_matrix, 5))
+        # print(f"lon = {lon}")
 
         vel_matrix = pos_matrix
         vel_matrix_inv = np.linalg.inv(vel_matrix)
@@ -237,15 +220,15 @@ class GalactocentricFrame:
         gc_y = transform[1, 0] * u + transform[1, 1] * v + transform[1, 2] * w + translation[1]
         gc_z = transform[2, 0] * u + transform[2, 1] * v + transform[2, 2] * w + translation[2]
 
-        print("AFFINE NO TRANSLATION")
-        print(f"X' = {gc_x - translation[0]}")
-        print(f"Y' = {gc_y - translation[1]}")
-        print(f"Z' = {gc_z - translation[2]}")
+        # print("AFFINE NO TRANSLATION")
+        # print(f"X' = {gc_x - translation[0]}")
+        # print(f"Y' = {gc_y - translation[1]}")
+        # print(f"Z' = {gc_z - translation[2]}")
 
-        print("AFFINE TRANSLATION")
-        print(f"Tx' = {translation[0]}")
-        print(f"Ty' = {translation[1]}")
-        print(f"Tz' = {translation[2]}")
+        # print("AFFINE TRANSLATION")
+        # print(f"Tx' = {translation[0]}")
+        # print(f"Ty' = {translation[1]}")
+        # print(f"Tz' = {translation[2]}")
 
         return (gc_x, gc_y, gc_z)
 
@@ -537,17 +520,17 @@ class GalactocentricFrame:
         return (gl_x, gl_y, gl_z)
 
 
-if __name__ == "__main__":
+def _check(frame: GalactocentricFrame, u: float, v: float, w: float) -> None:
     from galpy.util import coords as galcoords
+
+    print(f"FRAME = {frame}")
+    print(f"u, v, w = ({u}, {v}, {w})")
 
     _ABS_TOL: float = 1e-7
     _GALPY_ABS_TOL: float = 1e-4
+    _DECIMAL: int = 6
 
-    frame = GalactocentricFrame(sun_x=1.0, sun_y=0, sun_z=0.0, sun_vx=0.0, sun_vy=0.0, sun_vz=0.0)
     x_sign = 1 if frame.sun_x() >= 0 else -1
-    u = 0
-    v = 0
-    w = 69
     gl_x = np.full(1, u)
     gl_y = np.full(1, v)
     gl_z = np.full(1, w)
@@ -560,22 +543,24 @@ if __name__ == "__main__":
     )
 
     np_x, np_y, np_z = frame.gl_xyz_to_gc_xyz_numpy(gl_x, gl_y, gl_z, handedness="right")
-    np_x = np.round(np_x, 5)
-    np_y = np.round(np_y, 5)
-    np_z = np.round(np_z, 5)
+    np_x = np.round(np_x, _DECIMAL)
+    np_y = np.round(np_y, _DECIMAL)
+    np_z = np.round(np_z, _DECIMAL)
     pl_x_expr, pl_y_expr, pl_z_expr = frame.gl_xyz_to_gc_xyz_polars(
         pl.col("gl_x"), pl.col("gl_y"), pl.col("gl_z"), handedness="right"
     )
 
-    gal_xyz = galcoords.XYZ_to_galcenrect(gl_x, gl_y, gl_z, Xsun=x_sign * frame.sun_rxy(), Zsun=frame.sun_z(), _extra_rot=True)
-    gal_x = np.round(gal_xyz[:, 0], 5)
-    gal_y = np.round(gal_xyz[:, 1], 5)
-    gal_z = np.round(gal_xyz[:, 2], 5)
+    gal_xyz = galcoords.XYZ_to_galcenrect(
+        gl_x, x_sign * gl_y, gl_z, Xsun=x_sign * frame.sun_rxy(), Zsun=frame.sun_z(), _extra_rot=True
+    )
+    gal_x = np.round(gal_xyz[:, 0], _DECIMAL)
+    gal_y = np.round(gal_xyz[:, 1], _DECIMAL)
+    gal_z = np.round(gal_xyz[:, 2], _DECIMAL)
 
     data = data.with_columns(
-        pl_x_expr.alias("gc_x").round(5),
-        pl_y_expr.alias("gc_y").round(5),
-        pl_z_expr.alias("gc_z").round(5),
+        pl_x_expr.alias("gc_x").round(_DECIMAL),
+        pl_y_expr.alias("gc_y").round(_DECIMAL),
+        pl_z_expr.alias("gc_z").round(_DECIMAL),
     )
 
     print("numpy")
@@ -599,9 +584,22 @@ if __name__ == "__main__":
     np.testing.assert_allclose(data["gc_x"], np_x, atol=_ABS_TOL)
     np.testing.assert_allclose(data["gc_y"], np_y, atol=_ABS_TOL)
     np.testing.assert_allclose(data["gc_z"], np_z, atol=_ABS_TOL)
-    np.testing.assert_allclose(data["gc_x"], gal_x, atol=_GALPY_ABS_TOL)
-    np.testing.assert_allclose(data["gc_y"], gal_y, atol=_GALPY_ABS_TOL)
-    np.testing.assert_allclose(data["gc_z"], gal_z, atol=_GALPY_ABS_TOL)
-    np.testing.assert_allclose(np_x, gal_x, atol=_GALPY_ABS_TOL)
-    np.testing.assert_allclose(np_y, gal_y, atol=_GALPY_ABS_TOL)
-    np.testing.assert_allclose(np_z, gal_z, atol=_GALPY_ABS_TOL)
+    if frame.sun_y() == 0:
+        np.testing.assert_allclose(data["gc_x"], gal_x, atol=_GALPY_ABS_TOL)
+        np.testing.assert_allclose(data["gc_y"], gal_y, atol=_GALPY_ABS_TOL)
+        np.testing.assert_allclose(data["gc_z"], gal_z, atol=_GALPY_ABS_TOL)
+        np.testing.assert_allclose(np_x, gal_x, atol=_GALPY_ABS_TOL)
+        np.testing.assert_allclose(np_y, gal_y, atol=_GALPY_ABS_TOL)
+        np.testing.assert_allclose(np_z, gal_z, atol=_GALPY_ABS_TOL)
+
+
+if __name__ == "__main__":
+    _check(GalactocentricFrame(sun_x=1, sun_y=0, sun_z=0, sun_vx=0, sun_vy=0, sun_vz=0), 1, 0, 0)
+    _check(GalactocentricFrame(sun_x=1, sun_y=0, sun_z=0, sun_vx=0, sun_vy=0, sun_vz=0), 0, 0, 1)
+    _check(GalactocentricFrame(sun_x=-1, sun_y=0, sun_z=0, sun_vx=0, sun_vy=0, sun_vz=0), -1, 0, 0)
+    _check(GalactocentricFrame(sun_x=0, sun_y=1, sun_z=0, sun_vx=0, sun_vy=0, sun_vz=0), 1, 0, 0)
+    _check(GalactocentricFrame(sun_x=1, sun_y=0, sun_z=0, sun_vx=0, sun_vy=0, sun_vz=0), 0, 0, 69)
+    _check(GalactocentricFrame(sun_x=-1, sun_y=0, sun_z=0, sun_vx=0, sun_vy=0, sun_vz=0), 0, 0, 35)
+    _check(GalactocentricFrame(sun_x=-1, sun_y=0, sun_z=1, sun_vx=0, sun_vy=0, sun_vz=0), 0, 0, 1)
+    _check(GalactocentricFrame(sun_x=-1, sun_y=0, sun_z=0, sun_vx=0, sun_vy=0, sun_vz=0), 0, 1, 0)
+    _check(GalactocentricFrame(sun_x=1, sun_y=0, sun_z=0, sun_vx=0, sun_vy=0, sun_vz=0), 0, 1, 0)

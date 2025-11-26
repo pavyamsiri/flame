@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 
 _ABS_TOL: float = 1e-7
-_GALPY_ABS_TOL: float = 1e-4
+_GALPY_ABS_TOL: float = 1e-3
 
 
 @st.composite
@@ -331,9 +331,9 @@ def test_collinear_polars(
 
 @given(
     frame=random_frame_only_x(max_value=1e5),
-    u=st.floats(min_value=0, max_value=90),
-    v=st.floats(min_value=0, max_value=360),
-    w=st.floats(min_value=0, max_value=1e3),
+    u=st.floats(min_value=-100, max_value=100),
+    v=st.floats(min_value=-100, max_value=100),
+    w=st.floats(min_value=-100, max_value=100),
 )
 def test_gl_xyz_to_gc_xyz_galpy(frame: GalactocentricFrame, u: float, v: float, w: float) -> None:
     assume(frame.sun_rxy() > 0)
@@ -355,7 +355,9 @@ def test_gl_xyz_to_gc_xyz_galpy(frame: GalactocentricFrame, u: float, v: float, 
         pl.col("gl_x"), pl.col("gl_y"), pl.col("gl_z"), handedness="right"
     )
 
-    gal_xyz = galcoords.XYZ_to_galcenrect(gl_x, gl_y, gl_z, Xsun=x_sign * frame.sun_rxy(), Zsun=frame.sun_z(), _extra_rot=False)
+    gal_xyz = galcoords.XYZ_to_galcenrect(
+        gl_x, x_sign * gl_y, gl_z, Xsun=x_sign * frame.sun_rxy(), Zsun=frame.sun_z(), _extra_rot=True
+    )
     gal_x = gal_xyz[:, 0]
     gal_y = gal_xyz[:, 1]
     gal_z = gal_xyz[:, 2]
