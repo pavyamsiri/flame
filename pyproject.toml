@@ -40,6 +40,7 @@ line-length = 130
 
 [dependency-groups]
 dev = [
+    "galpy>=1.11.1",
     "hypothesis[numpy]>=6.145.1",
     "pytest>=8.4.2",
 ]

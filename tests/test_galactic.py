@@ -4,6 +4,7 @@ import numpy as np
 import polars as pl
 from hypothesis import given
 from hypothesis import strategies as st
+from galpy.util import coords as galcoords
 
 from flame.galactic import vrpmllpmbb_to_vxvyvz_numpy, vrpmllpmbb_to_vxvyvz_polars
 
@@ -39,7 +40,19 @@ def test_vrpmllpmbb_to_vxvyvz(vr: float, pmll: float, pmbb: float, lon: float, l
     lon_arr = np.array([lon], dtype=np.float64)
     lat_arr = np.array([lat], dtype=np.float64)
     distance_arr = np.array([distance], dtype=np.float64)
-    vx, vy, vz = vrpmllpmbb_to_vxvyvz_numpy(vr_arr, pmll_arr, pmbb_arr, lon_arr, lat_arr, distance_arr)
-    np.testing.assert_allclose(data["vx"].to_numpy(), vx)
-    np.testing.assert_allclose(data["vy"].to_numpy(), vy)
-    np.testing.assert_allclose(data["vz"].to_numpy(), vz)
+    fl_vx, fl_vy, fl_vz = vrpmllpmbb_to_vxvyvz_numpy(vr_arr, pmll_arr, pmbb_arr, lon_arr, lat_arr, distance_arr)
+
+    gl_v = galcoords.vrpmllpmbb_to_vxvyvz(vr_arr, pmll_arr, pmbb_arr, lon_arr, lat_arr, distance_arr, degree=False)
+    gl_vx = gl_v[:, 0]
+    gl_vy = gl_v[:, 1]
+    gl_vz = gl_v[:, 2]
+
+    np.testing.assert_allclose(data["vx"].to_numpy(), fl_vx)
+    np.testing.assert_allclose(data["vy"].to_numpy(), fl_vy)
+    np.testing.assert_allclose(data["vz"].to_numpy(), fl_vz)
+    np.testing.assert_allclose(data["vx"].to_numpy(), gl_vx)
+    np.testing.assert_allclose(data["vy"].to_numpy(), gl_vy)
+    np.testing.assert_allclose(data["vz"].to_numpy(), gl_vz)
+    np.testing.assert_allclose(fl_vx, gl_vx)
+    np.testing.assert_allclose(fl_vy, gl_vy)
+    np.testing.assert_allclose(fl_vz, gl_vz)
