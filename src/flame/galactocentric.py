@@ -112,15 +112,44 @@ class GalactocentricFrame:
 
         reflect_matrix = np.array(
             [
-                [-1, 0, 0],
-                [0, 1, 0],
+                [1, 0, 0],
+                [0, -1, 0],
                 [0, 0, 1],
             ],
             dtype=np.float64,
         )
 
-        pos_matrix = rxy_matrix @ rxz_matrix @ GALCEN_EXTRA_ROT @ reflect_matrix
-        pos_translation = -rxy_matrix @ rxz_matrix @ np.array([-sun_distance, 0, 0])
+        ra = -sun_x / sun_distance if sun_distance > 0 else 1
+        rd = -sun_y / sun_distance if sun_distance > 0 else 0
+        rg = -sun_z / sun_distance if sun_distance > 0 else 0
+
+        rb = -np.sin(lon)
+        re = np.cos(lon)
+        rh = 0
+
+        c3 = np.cross(np.array([ra, rd, rg]), np.array([rb, re, rh]))
+
+        pos_matrix = rxy_matrix @ rxz_matrix @ reflect_matrix @ GALCEN_EXTRA_ROT @ rxy_matrix.T
+        pos_matrix = GALCEN_EXTRA_ROT @ (
+            np.array(
+                [
+                    [ra, rb, c3[0]],
+                    [rd, re, c3[1]],
+                    [rg, rh, c3[2]],
+                ]
+            )
+        )
+        pos_translation = np.array([sun_x, sun_y, sun_z])
+
+        print(f"r_a = {ra}")
+        print(f"r_d = {rd}")
+        print(f"r_g = {rg}")
+        print(f"r_b = {rb}")
+        print(f"r_e = {re}")
+        print(f"r_h = {rh}")
+
+        print("POS MATRIX")
+        print(pos_matrix)
 
         pos_matrix_inv = np.linalg.inv(pos_matrix)
         pos_translation_inv = -pos_matrix_inv @ pos_translation
@@ -207,6 +236,16 @@ class GalactocentricFrame:
         gc_x = transform[0, 0] * u + transform[0, 1] * v + transform[0, 2] * w + translation[0]
         gc_y = transform[1, 0] * u + transform[1, 1] * v + transform[1, 2] * w + translation[1]
         gc_z = transform[2, 0] * u + transform[2, 1] * v + transform[2, 2] * w + translation[2]
+
+        print("AFFINE NO TRANSLATION")
+        print(f"X' = {gc_x - translation[0]}")
+        print(f"Y' = {gc_y - translation[1]}")
+        print(f"Z' = {gc_z - translation[2]}")
+
+        print("AFFINE TRANSLATION")
+        print(f"Tx' = {translation[0]}")
+        print(f"Ty' = {translation[1]}")
+        print(f"Tz' = {translation[2]}")
 
         return (gc_x, gc_y, gc_z)
 
@@ -499,4 +538,70 @@ class GalactocentricFrame:
 
 
 if __name__ == "__main__":
-    print(GALCEN_EXTRA_ROT)
+    from galpy.util import coords as galcoords
+
+    _ABS_TOL: float = 1e-7
+    _GALPY_ABS_TOL: float = 1e-4
+
+    frame = GalactocentricFrame(sun_x=1.0, sun_y=0, sun_z=0.0, sun_vx=0.0, sun_vy=0.0, sun_vz=0.0)
+    x_sign = 1 if frame.sun_x() >= 0 else -1
+    u = 0
+    v = 0
+    w = 69
+    gl_x = np.full(1, u)
+    gl_y = np.full(1, v)
+    gl_z = np.full(1, w)
+    data = pl.DataFrame(
+        {
+            "gl_x": gl_x,
+            "gl_y": gl_y,
+            "gl_z": gl_z,
+        }
+    )
+
+    np_x, np_y, np_z = frame.gl_xyz_to_gc_xyz_numpy(gl_x, gl_y, gl_z, handedness="right")
+    np_x = np.round(np_x, 5)
+    np_y = np.round(np_y, 5)
+    np_z = np.round(np_z, 5)
+    pl_x_expr, pl_y_expr, pl_z_expr = frame.gl_xyz_to_gc_xyz_polars(
+        pl.col("gl_x"), pl.col("gl_y"), pl.col("gl_z"), handedness="right"
+    )
+
+    gal_xyz = galcoords.XYZ_to_galcenrect(gl_x, gl_y, gl_z, Xsun=x_sign * frame.sun_rxy(), Zsun=frame.sun_z(), _extra_rot=True)
+    gal_x = np.round(gal_xyz[:, 0], 5)
+    gal_y = np.round(gal_xyz[:, 1], 5)
+    gal_z = np.round(gal_xyz[:, 2], 5)
+
+    data = data.with_columns(
+        pl_x_expr.alias("gc_x").round(5),
+        pl_y_expr.alias("gc_y").round(5),
+        pl_z_expr.alias("gc_z").round(5),
+    )
+
+    print("numpy")
+    print(np_x)
+    print(np_y)
+    print(np_z)
+    print()
+
+    print("polars")
+    print(data["gc_x"].to_numpy())
+    print(data["gc_y"].to_numpy())
+    print(data["gc_z"].to_numpy())
+    print()
+
+    print("galpy")
+    print(gal_x)
+    print(gal_y)
+    print(gal_z)
+    print()
+
+    np.testing.assert_allclose(data["gc_x"], np_x, atol=_ABS_TOL)
+    np.testing.assert_allclose(data["gc_y"], np_y, atol=_ABS_TOL)
+    np.testing.assert_allclose(data["gc_z"], np_z, atol=_ABS_TOL)
+    np.testing.assert_allclose(data["gc_x"], gal_x, atol=_GALPY_ABS_TOL)
+    np.testing.assert_allclose(data["gc_y"], gal_y, atol=_GALPY_ABS_TOL)
+    np.testing.assert_allclose(data["gc_z"], gal_z, atol=_GALPY_ABS_TOL)
+    np.testing.assert_allclose(np_x, gal_x, atol=_GALPY_ABS_TOL)
+    np.testing.assert_allclose(np_y, gal_y, atol=_GALPY_ABS_TOL)
+    np.testing.assert_allclose(np_z, gal_z, atol=_GALPY_ABS_TOL)

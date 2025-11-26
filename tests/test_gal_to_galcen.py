@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import polars as pl
+from galpy.util import coords as galcoords
 from hypothesis import assume, given
 from hypothesis import strategies as st
 
@@ -15,6 +16,7 @@ if TYPE_CHECKING:
 
 
 _ABS_TOL: float = 1e-7
+_GALPY_ABS_TOL: float = 1e-4
 
 
 @st.composite
@@ -30,6 +32,25 @@ def random_frame(draw: st.DrawFn, *, max_value: float = 1e8) -> GalactocentricFr
     return GalactocentricFrame(
         sun_x=sun_x,
         sun_y=sun_y,
+        sun_z=sun_z,
+        sun_vx=sun_vx,
+        sun_vy=sun_vy,
+        sun_vz=sun_vz,
+    )
+
+
+@st.composite
+def random_frame_only_x(draw: st.DrawFn, *, max_value: float = 1e8) -> GalactocentricFrame:
+    """Generate a random Galactocentric frame."""
+    reasonable_number = st.floats(min_value=-abs(max_value), max_value=abs(max_value), allow_nan=False, allow_infinity=False)
+    sun_x: float = draw(reasonable_number)
+    sun_z: float = draw(reasonable_number)
+    sun_vx: float = draw(reasonable_number)
+    sun_vy: float = draw(reasonable_number)
+    sun_vz: float = draw(reasonable_number)
+    return GalactocentricFrame(
+        sun_x=sun_x,
+        sun_y=0,
         sun_z=sun_z,
         sun_vx=sun_vx,
         sun_vy=sun_vy,
@@ -306,3 +327,51 @@ def test_collinear_polars(
     # Parallel vectors have zero cross product
     cross_product = np.cross(vec1, vec2)
     np.testing.assert_allclose(cross_product, 0, atol=_ABS_TOL)
+
+
+@given(
+    frame=random_frame_only_x(max_value=1e5),
+    u=st.floats(min_value=0, max_value=90),
+    v=st.floats(min_value=0, max_value=360),
+    w=st.floats(min_value=0, max_value=1e3),
+)
+def test_gl_xyz_to_gc_xyz_galpy(frame: GalactocentricFrame, u: float, v: float, w: float) -> None:
+    assume(frame.sun_rxy() > 0)
+    gl_x = np.full(1, u)
+    gl_y = np.full(1, v)
+    gl_z = np.full(1, w)
+    data = pl.DataFrame(
+        {
+            "gl_x": gl_x,
+            "gl_y": gl_y,
+            "gl_z": gl_z,
+        }
+    )
+
+    x_sign: float = 1 if frame.sun_x() >= 0 else -1
+
+    np_x, np_y, np_z = frame.gl_xyz_to_gc_xyz_numpy(gl_x, gl_y, gl_z, handedness="right")
+    pl_x_expr, pl_y_expr, pl_z_expr = frame.gl_xyz_to_gc_xyz_polars(
+        pl.col("gl_x"), pl.col("gl_y"), pl.col("gl_z"), handedness="right"
+    )
+
+    gal_xyz = galcoords.XYZ_to_galcenrect(gl_x, gl_y, gl_z, Xsun=x_sign * frame.sun_rxy(), Zsun=frame.sun_z(), _extra_rot=False)
+    gal_x = gal_xyz[:, 0]
+    gal_y = gal_xyz[:, 1]
+    gal_z = gal_xyz[:, 2]
+
+    data = data.with_columns(
+        pl_x_expr.alias("gc_x"),
+        pl_y_expr.alias("gc_y"),
+        pl_z_expr.alias("gc_z"),
+    )
+
+    np.testing.assert_allclose(data["gc_x"], np_x, atol=_ABS_TOL)
+    np.testing.assert_allclose(data["gc_y"], np_y, atol=_ABS_TOL)
+    np.testing.assert_allclose(data["gc_z"], np_z, atol=_ABS_TOL)
+    np.testing.assert_allclose(data["gc_x"], gal_x, atol=_GALPY_ABS_TOL)
+    np.testing.assert_allclose(data["gc_y"], gal_y, atol=_GALPY_ABS_TOL)
+    np.testing.assert_allclose(data["gc_z"], gal_z, atol=_GALPY_ABS_TOL)
+    np.testing.assert_allclose(np_x, gal_x, atol=_GALPY_ABS_TOL)
+    np.testing.assert_allclose(np_y, gal_y, atol=_GALPY_ABS_TOL)
+    np.testing.assert_allclose(np_z, gal_z, atol=_GALPY_ABS_TOL)
