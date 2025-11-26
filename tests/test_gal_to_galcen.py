@@ -377,3 +377,59 @@ def test_gl_xyz_to_gc_xyz_galpy(frame: GalactocentricFrame, u: float, v: float, 
     np.testing.assert_allclose(np_x, gal_x, atol=_GALPY_ABS_TOL)
     np.testing.assert_allclose(np_y, gal_y, atol=_GALPY_ABS_TOL)
     np.testing.assert_allclose(np_z, gal_z, atol=_GALPY_ABS_TOL)
+
+
+@given(
+    frame=random_frame_only_x(max_value=1e5),
+    v_u=st.floats(min_value=-100, max_value=100),
+    v_v=st.floats(min_value=-100, max_value=100),
+    v_w=st.floats(min_value=-100, max_value=100),
+)
+def test_gl_vxvyvz_to_gc_vxvyvz_galpy(frame: GalactocentricFrame, v_u: float, v_v: float, v_w: float) -> None:
+    assume(frame.sun_rxy() > 0)
+    gl_vx = np.full(1, v_u)
+    gl_vy = np.full(1, v_v)
+    gl_vz = np.full(1, v_w)
+    data = pl.DataFrame(
+        {
+            "gl_vx": gl_vx,
+            "gl_vy": gl_vy,
+            "gl_vz": gl_vz,
+        }
+    )
+
+    x_sign: float = 1 if frame.sun_x() >= 0 else -1
+
+    np_vx, np_vy, np_vz = frame.gl_vxvyvz_to_gc_vxvyvz_numpy(gl_vx, gl_vy, gl_vz, handedness="right")
+    pl_vx_expr, pl_vy_expr, pl_vz_expr = frame.gl_vxvyvz_to_gc_vxvyvz_polars(
+        pl.col("gl_vx"), pl.col("gl_vy"), pl.col("gl_vz"), handedness="right"
+    )
+
+    gal_vxvyvz = galcoords.vxvyvz_to_galcenrect(
+        gl_vx,
+        x_sign * gl_vy,
+        gl_vz,
+        vsun=(frame.sun_vx(), frame.sun_vy(), frame.sun_vz()),
+        Xsun=x_sign * frame.sun_rxy(),
+        Zsun=frame.sun_z(),
+        _extra_rot=True,
+    )
+    gal_vx = gal_vxvyvz[:, 0]
+    gal_vy = gal_vxvyvz[:, 1]
+    gal_vz = gal_vxvyvz[:, 2]
+
+    data = data.with_columns(
+        pl_vx_expr.alias("gc_vx"),
+        pl_vy_expr.alias("gc_vy"),
+        pl_vz_expr.alias("gc_vz"),
+    )
+
+    np.testing.assert_allclose(data["gc_vx"], np_vx, atol=_ABS_TOL)
+    np.testing.assert_allclose(data["gc_vy"], np_vy, atol=_ABS_TOL)
+    np.testing.assert_allclose(data["gc_vz"], np_vz, atol=_ABS_TOL)
+    np.testing.assert_allclose(data["gc_vx"], gal_vx, atol=_GALPY_ABS_TOL)
+    np.testing.assert_allclose(data["gc_vy"], gal_vy, atol=_GALPY_ABS_TOL)
+    np.testing.assert_allclose(data["gc_vz"], gal_vz, atol=_GALPY_ABS_TOL)
+    np.testing.assert_allclose(np_vx, gal_vx, atol=_GALPY_ABS_TOL)
+    np.testing.assert_allclose(np_vy, gal_vy, atol=_GALPY_ABS_TOL)
+    np.testing.assert_allclose(np_vz, gal_vz, atol=_GALPY_ABS_TOL)
