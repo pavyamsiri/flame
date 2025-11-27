@@ -86,6 +86,56 @@ def spherical_to_cartesian_polars(lon: AngleExpr, lat: AngleExpr, distance: pl.E
     return (x, y, z)
 
 
+def cartesian_to_polar_numpy(
+    x: onp.ArrayND[_Float, _Shape], y: onp.ArrayND[_Float, _Shape]
+) -> tuple[onp.ArrayND[np.float64, _Shape], AngleArray[np.float64, _Shape]]:
+    """Transform Cartesian coordinates to polar coordinates.
+
+    Parameters
+    ----------
+    x : Array[f64]
+        The x coordinate.
+    y : Array[f64]
+        The y coordinate.
+
+    Returns
+    -------
+    r : Array[f64]
+        The radial coordinate.
+    phi : AngleArray[f64]
+        The azimuthal coordinate.
+
+    """
+    rxy = cast(onp.ArrayND[np.float64, _Shape], np.hypot(x, y).astype(np.float64))
+    phi = cast(onp.ArrayND[np.float64, _Shape], np.arctan2(y, x).astype(np.float64))
+
+    return (rxy, AngleArray(phi, "rad"))
+
+
+def cartesian_to_polar_polars(x: pl.Expr, y: pl.Expr) -> tuple[pl.Expr, AngleExpr]:
+    """Transform Cartesian coordinates to polar coordinates.
+
+    Parameters
+    ----------
+    x : pl.Expr
+        The x coordinate.
+    y : pl.Expr
+        The y coordinate.
+
+    Returns
+    -------
+    r : pl.Expr
+        The radial coordinate.
+    phi : AngleExpr
+        The azimuthal coordinate.
+
+    """
+    rxy = (x**2 + y**2).sqrt()
+    phi = pl.arctan2(y, x)
+
+    return (rxy, AngleExpr(phi, "rad"))
+
+
 def cartesian_vec_to_polar_vec_numpy(
     vx: onp.ArrayND[_Float, _Shape], vy: onp.ArrayND[_Float, _Shape], phi: AngleArray[_Float, _Shape]
 ) -> tuple[onp.ArrayND[np.float64, _Shape], onp.ArrayND[np.float64, _Shape]]:
