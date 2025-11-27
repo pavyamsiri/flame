@@ -8,6 +8,8 @@ import numpy as np
 import polars as pl
 from optype import numpy as onp
 
+from .units import AngleArray, AngleExpr
+
 if TYPE_CHECKING:
     from typing import Final
 
@@ -22,8 +24,8 @@ def vrpmllpmbb_to_vxvyvz_numpy(
     vr: onp.ArrayND[_Float, _Shape],
     pmll: onp.ArrayND[_Float, _Shape],
     pmbb: onp.ArrayND[_Float, _Shape],
-    lon: onp.ArrayND[_Float, _Shape],
-    lat: onp.ArrayND[_Float, _Shape],
+    lon: AngleArray[_Float, _Shape],
+    lat: AngleArray[_Float, _Shape],
     distance: onp.ArrayND[_Float, _Shape],
 ) -> tuple[
     onp.ArrayND[np.float64, _Shape],
@@ -40,10 +42,10 @@ def vrpmllpmbb_to_vxvyvz_numpy(
         The proper motion in Galactic longitude corrected by cos(b) in mas/yr.
     pmbb : Array[float]
         The proper motion in Galactic latitude in mas/yr.
-    lon : Array[float]
-        The Galactic longitude in radians.
-    lat : Array[float]
-        The Galactic latitude in radians.
+    lon : AngleArray[float]
+        The Galactic longitude.
+    lat : AngleArray[float]
+        The Galactic latitude.
     distance : Array[float]
         The distance in kpc.
 
@@ -57,10 +59,12 @@ def vrpmllpmbb_to_vxvyvz_numpy(
         The velocity in the Galactic z direction in km/s.
 
     """
-    sinl = np.sin(lon)
-    cosl = np.cos(lon)
-    sinb = np.sin(lat)
-    cosb = np.cos(lat)
+    lon_radians = lon.to_radians()
+    lat_radians = lat.to_radians()
+    sinl = np.sin(lon_radians)
+    cosl = np.cos(lon_radians)
+    sinb = np.sin(lat_radians)
+    cosb = np.cos(lat_radians)
 
     rotation_0_0 = cosl * cosb
     rotation_1_0 = sinl * cosb
@@ -91,8 +95,8 @@ def vrpmllpmbb_to_vxvyvz_polars(
     vr: pl.Expr,
     pmll: pl.Expr,
     pmbb: pl.Expr,
-    lon: pl.Expr,
-    lat: pl.Expr,
+    lon: AngleExpr,
+    lat: AngleExpr,
     distance: pl.Expr,
 ) -> tuple[
     pl.Expr,
@@ -109,10 +113,10 @@ def vrpmllpmbb_to_vxvyvz_polars(
         The proper motion in Galactic longitude corrected by cos(b) in mas/yr.
     pmbb : pl.Expr
         The proper motion in Galactic latitude in mas/yr.
-    lon : pl.Expr
-        The Galactic longitude in radians.
-    lat : pl.Expr
-        The Galactic latitude in radians.
+    lon : AngleExpr
+        The Galactic longitude.
+    lat : AngleExpr
+        The Galactic latitude.
     distance : pl.Expr
         The distance in kpc.
 
@@ -126,10 +130,12 @@ def vrpmllpmbb_to_vxvyvz_polars(
         The velocity in the Galactic z direction in km/s.
 
     """
-    sinl = lon.sin()
-    cosl = lon.cos()
-    sinb = lat.sin()
-    cosb = lat.cos()
+    lon_radians = lon.to_radians()
+    lat_radians = lat.to_radians()
+    sinl = lon_radians.sin()
+    cosl = lon_radians.cos()
+    sinb = lat_radians.sin()
+    cosb = lat_radians.cos()
 
     rotation_0_0 = cosl * cosb
     rotation_1_0 = sinl * cosb

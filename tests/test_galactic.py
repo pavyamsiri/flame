@@ -7,6 +7,7 @@ from hypothesis import strategies as st
 from galpy.util import coords as galcoords
 
 from flame.galactic import vrpmllpmbb_to_vxvyvz_numpy, vrpmllpmbb_to_vxvyvz_polars
+from flame.units import AngleArray, AngleExpr
 
 
 @given(
@@ -30,7 +31,12 @@ def test_vrpmllpmbb_to_vxvyvz(vr: float, pmll: float, pmbb: float, lon: float, l
     )
 
     vx_expr, vy_expr, vz_expr = vrpmllpmbb_to_vxvyvz_polars(
-        pl.col("vr"), pl.col("pmll"), pl.col("pmbb"), pl.col("lon"), pl.col("lat"), pl.col("distance")
+        pl.col("vr"),
+        pl.col("pmll"),
+        pl.col("pmbb"),
+        AngleExpr(pl.col("lon"), "rad"),
+        AngleExpr(pl.col("lat"), "rad"),
+        pl.col("distance"),
     )
 
     data = data.with_columns((vx_expr.alias("vx"), vy_expr.alias("vy"), vz_expr.alias("vz")))
@@ -40,7 +46,14 @@ def test_vrpmllpmbb_to_vxvyvz(vr: float, pmll: float, pmbb: float, lon: float, l
     lon_arr = np.array([lon], dtype=np.float64)
     lat_arr = np.array([lat], dtype=np.float64)
     distance_arr = np.array([distance], dtype=np.float64)
-    fl_vx, fl_vy, fl_vz = vrpmllpmbb_to_vxvyvz_numpy(vr_arr, pmll_arr, pmbb_arr, lon_arr, lat_arr, distance_arr)
+    fl_vx, fl_vy, fl_vz = vrpmllpmbb_to_vxvyvz_numpy(
+        vr_arr,
+        pmll_arr,
+        pmbb_arr,
+        AngleArray(lon_arr, "rad"),
+        AngleArray(lat_arr, "rad"),
+        distance_arr,
+    )
 
     gl_v = galcoords.vrpmllpmbb_to_vxvyvz(vr_arr, pmll_arr, pmbb_arr, lon_arr, lat_arr, distance_arr, degree=False)
     gl_vx = gl_v[:, 0]
