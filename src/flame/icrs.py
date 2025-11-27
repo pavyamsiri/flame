@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypeVar, cast, Any
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 import numpy as np
 import polars as pl
 from optype import numpy as onp
+
+from .units import AngleArray, AngleExpr
 
 if TYPE_CHECKING:
     from typing import Final
@@ -22,33 +24,35 @@ RA_NGP: Final[float] = 3.366032882941063
 
 
 def radec_to_lb_numpy(
-    ra: onp.ArrayND[_Float, _Shape], dec: onp.ArrayND[_Float, _Shape]
-) -> tuple[onp.ArrayND[np.float64, _Shape], onp.ArrayND[np.float64, _Shape]]:
+    ra: AngleArray[_Float, _Shape], dec: AngleArray[_Float, _Shape]
+) -> tuple[AngleArray[np.float64, _Shape], AngleArray[np.float64, _Shape]]:
     """Transform from equatorial ICRS coordinates to Galactic coordinates.
 
     Parameters
     ----------
-    ra : Array[float]
-        The right ascension in radians.
-    dec : Array[float]
-        The declination in radians.
+    ra : AngleArray[f64]
+        The right ascension.
+    dec : AngleArray[f64]
+        The declination.
 
     Returns
     -------
-    lon : Array[float]
-        The longitude in radians.
-    lat : Array[float]
-        The latitude in radians.
+    lon : AngleArray[f64]
+        The longitude.
+    lat : AngleArray[f64]
+        The latitude.
 
     """
+    dec_radians = dec.to_radians()
+    ra_radians = ra.to_radians()
     transform = _get_transformation_matrix()
     xyz = cast(
         onp.Array2D[np.float64],
         np.array(
             [
-                np.cos(dec) * np.cos(ra),
-                np.cos(dec) * np.sin(ra),
-                np.sin(dec),
+                np.cos(dec_radians) * np.cos(ra_radians),
+                np.cos(dec_radians) * np.sin(ra_radians),
+                np.sin(dec_radians),
             ],
             dtype=np.float64,
         ),
@@ -61,34 +65,36 @@ def radec_to_lb_numpy(
     lat = np.arcsin(gl_xyz[2])
     lon = np.arctan2(gl_xyz[1] / np.cos(lat), gl_xyz[0] / np.cos(lat))
     lon[lon < 0.0] += 2 * np.pi
-    return (lon, lat)
+    return (AngleArray(lon, "rad"), AngleArray(lat, "rad"))
 
 
 def radec_to_lb_polars(
-    ra: pl.Expr,
-    dec: pl.Expr,
-) -> tuple[pl.Expr, pl.Expr]:
+    ra: AngleExpr,
+    dec: AngleExpr,
+) -> tuple[AngleExpr, AngleExpr]:
     """Transform from equatorial ICRS coordinates to Galactic coordinates.
 
     Parameters
     ----------
-    ra : pl.Expr
-        The right ascension in radians.
-    dec : pl.Expr
-        The declination in radians.
+    ra : AngleExpr
+        The right ascension.
+    dec : AngleExpr
+        The declination.
 
     Returns
     -------
-    lon : pl.Expr
-        The longitude in radians.
-    lat : pl.Expr
-        The latitude in radians.
+    lon : AngleExpr
+        The longitude.
+    lat : AngleExpr
+        The latitude.
 
     """
+    ra_radians = ra.to_radians()
+    dec_radians = dec.to_radians()
     transform = _get_transformation_matrix()
-    cosdec_cosra = dec.cos() * ra.cos()
-    cosdec_sinra = dec.cos() * ra.sin()
-    sindec = dec.sin()
+    cosdec_cosra = dec_radians.cos() * ra_radians.cos()
+    cosdec_sinra = dec_radians.cos() * ra_radians.sin()
+    sindec = dec_radians.sin()
 
     gl_x = cast(pl.Expr, transform[0, 0] * cosdec_cosra + transform[0, 1] * cosdec_sinra + transform[0, 2] * sindec)
     gl_y = cast(pl.Expr, transform[1, 0] * cosdec_cosra + transform[1, 1] * cosdec_sinra + transform[1, 2] * sindec)
@@ -100,7 +106,7 @@ def radec_to_lb_polars(
     lat = gl_z.arcsin()
     lon = pl.arctan2(gl_y / lat.cos(), gl_x / lat.cos())
     lon = pl.when(lon < 0.0).then(lon + 2 * np.pi).otherwise(lon)
-    return (lon, lat)
+    return (AngleExpr(lon, "rad"), AngleExpr(lat, "rad"))
 
 
 def pmrapmdec_to_pmllpmbb_numpy(
@@ -237,17 +243,3 @@ def _get_transformation_matrix() -> onp.Array2D[np.float64]:
         ),
     )
     return cast(onp.Array2D[np.float64], theta_matrix @ dec_matrix @ ra_matrix)
-
-
-# if __name__ == "__main__":
-#     data = pl.DataFrame(
-#         {
-#             "ra": [0],
-#             "dec": [0],
-#         }
-#     )
-
-#     lon, lat = radec_to_lb_polars(pl.col("ra"), pl.col("dec"))
-
-#     print(data.with_columns((lon.alias("lon"), lat.alias("lat"))))
-#     print(radec_to_lb_numpy(np.zeros(1, dtype=np.float64), np.zeros(1, dtype=np.float64)))
