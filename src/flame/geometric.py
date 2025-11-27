@@ -78,3 +78,61 @@ def spherical_to_cartesian_polars(lon: pl.Expr, lat: pl.Expr, distance: pl.Expr)
     y = distance * cosb * sinl
     z = distance * sinb
     return (x, y, z)
+
+
+def cartesian_vec_to_polar_vec_numpy(
+    vx: onp.ArrayND[_Float, _Shape], vy: onp.ArrayND[_Float, _Shape], phi: onp.ArrayND[_Float, _Shape]
+) -> tuple[onp.ArrayND[np.float64, _Shape], onp.ArrayND[np.float64, _Shape]]:
+    """Transform Cartesian velocity to polar velocity.
+
+    Parameters
+    ----------
+    vx : Array[f64]
+        The x-velocity.
+    vy : Array[f64]
+        The y-velocity.
+    phi : Array[f64]
+        The azimuthal coordinate in radians.
+
+    Returns
+    -------
+    vr : Array[f64]
+        The radial velocity.
+    vphi : Array[f64]
+        The tangential velocity.
+
+    """
+    cosphi = np.cos(phi)
+    sinphi = np.sin(phi)
+    vr = cast(onp.ArrayND[np.float64, _Shape], (vx * cosphi + vy * sinphi).astype(np.float64))
+    vphi = cast(onp.ArrayND[np.float64, _Shape], (-vx * sinphi + vy * cosphi).astype(np.float64))
+
+    return (vr, vphi)
+
+
+def cartesian_vec_to_polar_vec_polars(vx: pl.Expr, vy: pl.Expr, phi: pl.Expr) -> tuple[pl.Expr, pl.Expr]:
+    """Transform Cartesian velocity to polar velocity.
+
+    Parameters
+    ----------
+    vx : pl.Expr
+        The x-velocity.
+    vy : pl.Expr
+        The y-velocity.
+    phi : pl.Expr
+        The azimuthal coordinate in radians.
+
+    Returns
+    -------
+    vr : pl.Expr
+        The radial velocity.
+    vphi : pl.Expr
+        The tangential velocity.
+
+    """
+    cosphi = phi.cos()
+    sinphi = phi.sin()
+    vr = vx * cosphi + vy * sinphi
+    vphi = -vx * sinphi + vy * cosphi
+
+    return (vr, vphi)
