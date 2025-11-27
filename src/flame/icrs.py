@@ -113,8 +113,8 @@ def pmrapmdec_to_pmllpmbb_numpy(
     pmracosdec: onp.ArrayND[_Float, _Shape],
     pmdec: onp.ArrayND[_Float, _Shape],
     *,
-    ra: onp.ArrayND[_Float, _Shape],
-    dec: onp.ArrayND[_Float, _Shape],
+    ra: AngleArray[_Float, _Shape],
+    dec: AngleArray[_Float, _Shape],
 ) -> tuple[onp.ArrayND[np.float64, _Shape], onp.ArrayND[np.float64, _Shape]]:
     """Transform from equatorial ICRS proper motions to Galactic proper motions.
 
@@ -124,28 +124,31 @@ def pmrapmdec_to_pmllpmbb_numpy(
         The proper motion in right ascension corrected by cos(dec) in mas/yr.
     pmdec : Array[float]
         The proper motion in declination in mas/yr.
-    ra : Array[float]
+    ra : AngleArray[float]
         The right ascension in radians.
-    dec : Array[float]
+    dec : AngleArray[float]
         The declination in radians.
 
     Returns
     -------
-    pmll : Array[float]
+    pmllcosb : Array[float]
         The proper motion in longitude corrected by cos(b) in mas/yr.
     pmbb : Array[float]
         The proper motion in latitude in mas/yr.
 
     """
-    treated_dec = np.copy(dec).astype(np.float64)
+    ra_radians = ra.to_radians()
+    dec_radians = dec.to_radians()
+
+    treated_dec = np.copy(dec_radians).astype(np.float64)
     # Add epsilon to handle pole
     treated_dec[treated_dec == DEC_NGP] += 1e-16
     sindec_ngp: float = np.sin(DEC_NGP)
     cosdec_ngp: float = np.cos(DEC_NGP)
     sindec = np.sin(treated_dec)
     cosdec = np.cos(treated_dec)
-    sinrarangp = np.sin(ra - RA_NGP)
-    cosrarangp = np.cos(ra - RA_NGP)
+    sinrarangp = np.sin(ra_radians - RA_NGP)
+    cosrarangp = np.cos(ra_radians - RA_NGP)
     cosphi = sindec_ngp * cosdec - cosdec_ngp * sindec * cosrarangp
     sinphi = sinrarangp * cosdec_ngp
     norm = np.sqrt(cosphi**2.0 + sinphi**2.0)
@@ -166,8 +169,8 @@ def pmrapmdec_to_pmllpmbb_polars(
     pmracosdec: pl.Expr,
     pmdec: pl.Expr,
     *,
-    ra: pl.Expr,
-    dec: pl.Expr,
+    ra: AngleExpr,
+    dec: AngleExpr,
 ) -> tuple[pl.Expr, pl.Expr]:
     """Transform from equatorial ICRS proper motions to Galactic proper motions.
 
@@ -177,9 +180,9 @@ def pmrapmdec_to_pmllpmbb_polars(
         The proper motion in right ascension corrected by cos(dec) in mas/yr.
     pmdec : pl.Expr
         The proper motion in declination in mas/yr.
-    ra : pl.Expr
+    ra : AngleExpr
         The right ascension in radians.
-    dec : pl.Expr
+    dec : AngleExpr
         The declination in radians.
 
     Returns
@@ -190,14 +193,16 @@ def pmrapmdec_to_pmllpmbb_polars(
         The proper motion in latitude in mas/yr.
 
     """
+    ra_radians = ra.to_radians()
+    dec_radians = dec.to_radians()
     # Add epsilon to handle pole
-    treated_dec = pl.when(dec == DEC_NGP).then(dec + 1e-16).otherwise(dec)
+    treated_dec = pl.when(dec_radians == DEC_NGP).then(dec_radians + 1e-16).otherwise(dec_radians)
     sindec_ngp: float = np.sin(DEC_NGP)
     cosdec_ngp: float = np.cos(DEC_NGP)
     sindec = treated_dec.sin()
     cosdec = treated_dec.cos()
-    sinrarangp = (ra - RA_NGP).sin()
-    cosrarangp = (ra - RA_NGP).cos()
+    sinrarangp = (ra_radians - RA_NGP).sin()
+    cosrarangp = (ra_radians - RA_NGP).cos()
     cosphi = sindec_ngp * cosdec - cosdec_ngp * sindec * cosrarangp
     sinphi = sinrarangp * cosdec_ngp
     norm = (cosphi**2.0 + sinphi**2.0).sqrt()

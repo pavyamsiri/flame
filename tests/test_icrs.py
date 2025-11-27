@@ -55,7 +55,7 @@ def test_pmrapmdec_to_pmllpmbb(pmra: float, pmdec: float, ra: float, dec: float)
     )
 
     fl_pmll, fl_pmbb = pmrapmdec_to_pmllpmbb_polars(
-        pmracosdec=pl.col("pmra"), pmdec=pl.col("pmdec"), ra=pl.col("ra"), dec=pl.col("dec")
+        pmracosdec=pl.col("pmra"), pmdec=pl.col("pmdec"), ra=AngleExpr(pl.col("ra"), "rad"), dec=AngleExpr(pl.col("dec"), "rad")
     )
 
     data = data.select((fl_pmll.alias("pmll"), fl_pmbb.alias("pmbb")))
@@ -64,7 +64,9 @@ def test_pmrapmdec_to_pmllpmbb(pmra: float, pmdec: float, ra: float, dec: float)
     pmdec_arr = np.array([pmdec], dtype=np.float64)
     ra_arr = np.array([ra], dtype=np.float64)
     dec_arr = np.array([dec], dtype=np.float64)
-    fl_pmll, fl_pmbb = pmrapmdec_to_pmllpmbb_numpy(pmracosdec_arr, pmdec_arr, ra=ra_arr, dec=dec_arr)
+    fl_pmll, fl_pmbb = pmrapmdec_to_pmllpmbb_numpy(
+        pmracosdec_arr, pmdec_arr, ra=AngleArray(ra_arr, "rad"), dec=AngleArray(dec_arr, "rad")
+    )
 
     gl_pmllpmbb = galcoords.pmrapmdec_to_pmllpmbb(pmracosdec_arr, pmdec_arr, ra=ra_arr, dec=dec_arr, degree=False, epoch=None)
     gl_pmll = gl_pmllpmbb[:, 0]
