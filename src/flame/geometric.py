@@ -8,6 +8,8 @@ import numpy as np
 import polars as pl
 from optype import numpy as onp
 
+from .units import AngleExpr, AngleArray
+
 _Shape = TypeVar("_Shape", bound=tuple[Any, ...])
 _Float = TypeVar("_Float", bound=np.float64)
 
@@ -81,7 +83,7 @@ def spherical_to_cartesian_polars(lon: pl.Expr, lat: pl.Expr, distance: pl.Expr)
 
 
 def cartesian_vec_to_polar_vec_numpy(
-    vx: onp.ArrayND[_Float, _Shape], vy: onp.ArrayND[_Float, _Shape], phi: onp.ArrayND[_Float, _Shape]
+    vx: onp.ArrayND[_Float, _Shape], vy: onp.ArrayND[_Float, _Shape], phi: AngleArray[_Float, _Shape]
 ) -> tuple[onp.ArrayND[np.float64, _Shape], onp.ArrayND[np.float64, _Shape]]:
     """Transform Cartesian velocity to polar velocity.
 
@@ -102,15 +104,16 @@ def cartesian_vec_to_polar_vec_numpy(
         The tangential velocity.
 
     """
-    cosphi = np.cos(phi)
-    sinphi = np.sin(phi)
+    phi_rad = phi.to_radians()
+    cosphi = np.cos(phi_rad)
+    sinphi = np.sin(phi_rad)
     vr = cast(onp.ArrayND[np.float64, _Shape], (vx * cosphi + vy * sinphi).astype(np.float64))
     vphi = cast(onp.ArrayND[np.float64, _Shape], (-vx * sinphi + vy * cosphi).astype(np.float64))
 
     return (vr, vphi)
 
 
-def cartesian_vec_to_polar_vec_polars(vx: pl.Expr, vy: pl.Expr, phi: pl.Expr) -> tuple[pl.Expr, pl.Expr]:
+def cartesian_vec_to_polar_vec_polars(vx: pl.Expr, vy: pl.Expr, phi: AngleExpr) -> tuple[pl.Expr, pl.Expr]:
     """Transform Cartesian velocity to polar velocity.
 
     Parameters
@@ -130,8 +133,9 @@ def cartesian_vec_to_polar_vec_polars(vx: pl.Expr, vy: pl.Expr, phi: pl.Expr) ->
         The tangential velocity.
 
     """
-    cosphi = phi.cos()
-    sinphi = phi.sin()
+    phi_rad = phi.to_radians()
+    cosphi = phi_rad.cos()
+    sinphi = phi_rad.sin()
     vr = vx * cosphi + vy * sinphi
     vphi = -vx * sinphi + vy * cosphi
 

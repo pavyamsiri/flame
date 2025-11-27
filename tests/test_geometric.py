@@ -9,6 +9,7 @@ from hypothesis import strategies as st
 from galpy.util import coords as galcoords
 
 from flame.geometric import cartesian_vec_to_polar_vec_numpy, cartesian_vec_to_polar_vec_polars
+from flame.units import AngleArray, AngleExpr
 
 
 @given(
@@ -25,13 +26,13 @@ def test_cartesian_vec_to_polar_vec(vx: float, vy: float, phi: float) -> None:
         }
     )
 
-    vr_expr, vphi_expr = cartesian_vec_to_polar_vec_polars(pl.col("vx"), pl.col("vy"), pl.col("phi"))
+    vr_expr, vphi_expr = cartesian_vec_to_polar_vec_polars(pl.col("vx"), pl.col("vy"), AngleExpr(pl.col("phi"), "rad"))
 
     data = data.with_columns((vr_expr.alias("vr"), vphi_expr.alias("vphi")))
     vx_arr = np.array([vx], dtype=np.float64)
     vy_arr = np.array([vy], dtype=np.float64)
     phi_arr = np.array([phi], dtype=np.float64)
-    fl_vr, fl_vphi = cartesian_vec_to_polar_vec_numpy(vx_arr, vy_arr, phi_arr)
+    fl_vr, fl_vphi = cartesian_vec_to_polar_vec_numpy(vx_arr, vy_arr, AngleArray(phi_arr, "rad"))
 
     zero_arr = np.zeros(1, dtype=np.float64)
     gal_vr, gal_vphi, _ = galcoords.rect_to_cyl_vec(vx_arr, vy_arr, zero_arr, zero_arr, phi_arr, zero_arr, cyl=True)
