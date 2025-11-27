@@ -18,8 +18,7 @@ class AngleExpr:
         self.units: Literal["deg", "rad"] = units
 
     def alias(self, name: str) -> AngleExpr:
-        self.data.alias(name)
-        return self
+        return AngleExpr(self.data.alias(name), units=self.units)
 
     def to_radians(self) -> pl.Expr:
         match self.units:
