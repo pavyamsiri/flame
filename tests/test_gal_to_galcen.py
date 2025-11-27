@@ -9,6 +9,7 @@ from hypothesis import assume, given
 from hypothesis import strategies as st
 
 from flame.galactocentric import GalactocentricFrame
+from flame.units import AngleExpr
 from flame.geometric import spherical_to_cartesian_polars
 
 if TYPE_CHECKING:
@@ -298,7 +299,7 @@ def test_collinear_polars(
 ) -> None:
     """Check that points with the same longitude and latitude are collinear with the Sun."""
     gl_x_expr, gl_y_expr, gl_z_expr = spherical_to_cartesian_polars(
-        pl.col("lon").radians(), pl.col("lat").radians(), pl.col("distance")
+        AngleExpr(pl.col("lon"), "deg"), AngleExpr(pl.col("lat"), "deg"), pl.col("distance")
     )
     gc_x_expr, gc_y_expr, gc_z_expr = frame.gl_xyz_to_gc_xyz_polars(
         gl_x_expr.alias("gl_x"), gl_y_expr.alias("gl_y"), gl_z_expr.alias("gl_z"), handedness=handedness
