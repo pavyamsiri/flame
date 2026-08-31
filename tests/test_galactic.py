@@ -4,9 +4,10 @@ import numpy as np
 import polars as pl
 from hypothesis import given
 from hypothesis import strategies as st
-from galpy.util import coords as galcoords
+from galpy.util import coords as galcoords  # pyright: ignore[reportMissingTypeStubs]
 
-from flame.galactic import vrpmllpmbb_to_vxvyvz_numpy, vrpmllpmbb_to_vxvyvz_polars
+from flame.numpy.galactic import vrpmllpmbb_to_vxvyvz as vrpmllpmbb_to_vxvyvz_numpy
+from flame.polars.galactic import vrpmllpmbb_to_vxvyvz as vrpmllpmbb_to_vxvyvz_polars
 from flame.units import AngleArray, AngleExpr
 
 
