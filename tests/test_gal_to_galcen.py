@@ -11,8 +11,11 @@ from hypothesis import assume, given
 from hypothesis import strategies as st
 
 from flame.galactocentric import GalactocentricFrame
+from flame.numpy.icrs import icrs_to_galactic_cartesian as icrs_to_galactic_cartesian_numpy
+from flame.numpy.icrs import icrs_to_galactic_velocity as icrs_to_galactic_velocity_numpy
 from flame.polars.geometric import spherical_to_cartesian as spherical_to_cartesian_polars
 from flame.units import AngleExpr
+from flame.units import AngleArray
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -99,6 +102,47 @@ def test_cached_transforms_are_not_mutable() -> None:
         frame.numpy._transforms = frame._transforms
     with pytest.raises(ValueError):
         frame._transforms.pos_matrix[0, 0] = 0.0
+
+
+def test_phase_space_from_icrs() -> None:
+    frame = GalactocentricFrame()
+    ra = np.array([1.0], dtype=np.float64)
+    dec = np.array([-0.5], dtype=np.float64)
+    distance = np.array([2.0], dtype=np.float64)
+    pmracosdec = np.array([3.0], dtype=np.float64)
+    pmdec = np.array([-4.0], dtype=np.float64)
+    radial_velocity = np.array([5.0], dtype=np.float64)
+    ra_angle = AngleArray(ra, "rad")
+    dec_angle = AngleArray(dec, "rad")
+
+    actual = frame.numpy.phase_space_from_icrs(ra_angle, dec_angle, distance, pmracosdec, pmdec, radial_velocity)
+    gl_position = icrs_to_galactic_cartesian_numpy(ra_angle, dec_angle, distance)
+    gl_velocity = icrs_to_galactic_velocity_numpy(
+        pmracosdec, pmdec, radial_velocity, ra=ra_angle, dec=dec_angle, distance=distance
+    )
+    expected = (*frame.numpy.position_from_galactic(*gl_position), *frame.numpy.velocity_from_galactic(*gl_velocity))
+    np.testing.assert_allclose(actual, expected)
+
+    data = pl.DataFrame(
+        {
+            "ra": ra,
+            "dec": dec,
+            "distance": distance,
+            "pmracosdec": pmracosdec,
+            "pmdec": pmdec,
+            "radial_velocity": radial_velocity,
+        }
+    )
+    polars_actual = frame.polars.phase_space_from_icrs(
+        AngleExpr(pl.col("ra"), "rad"),
+        AngleExpr(pl.col("dec"), "rad"),
+        pl.col("distance"),
+        pl.col("pmracosdec"),
+        pl.col("pmdec"),
+        pl.col("radial_velocity"),
+    )
+    data = data.with_columns(*(expression.alias(name) for expression, name in zip(polars_actual, ("x", "y", "z", "vx", "vy", "vz"), strict=True)))
+    np.testing.assert_allclose(data.select("x", "y", "z", "vx", "vy", "vz").to_numpy().T, actual)
 
 
 @given(frame=random_frame(), handedness=st.sampled_from(["right", "left"]))

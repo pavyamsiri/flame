@@ -9,8 +9,86 @@ from optype import numpy as onp
 
 from flame._icrs import DEC_NGP, RA_NGP, TRANSFORMATION_MATRIX
 from flame.units import AngleArray
+from .geometric import spherical_to_cartesian
+from .galactic import vrpmllpmbb_to_vxvyvz
 
-__all__: list[str] = ["radec_to_lb", "pmrapmdec_to_pmllpmbb"]
+__all__: list[str] = [
+    "radec_to_lb",
+    "pmrapmdec_to_pmllpmbb",
+    "icrs_to_galactic_cartesian",
+    "icrs_to_galactic_velocity",
+]
+
+
+def icrs_to_galactic_cartesian[F: np.float64, S: tuple[Any, ...]](
+    ra: AngleArray[F, S], dec: AngleArray[F, S], distance: onp.ArrayND[F, S]
+) -> tuple[onp.ArrayND[np.float64, S], onp.ArrayND[np.float64, S], onp.ArrayND[np.float64, S]]:
+    """Transform from equatorial ICRS coordinates to Galactic Cartesian coordinates.
+
+    Parameters
+    ----------
+    ra : AngleArray[float]
+        The right ascension.
+    dec : AngleArray[float]
+        The declination.
+    distance : Array[float]
+        The distance.
+
+    Returns
+    -------
+    x : Array[f64]
+        The Galactic Cartesian x coordinate.
+    y : Array[f64]
+        The Galactic Cartesian y coordinate.
+    z : Array[f64]
+        The Galactic Cartesian z coordinate.
+
+    """
+    lon, lat = radec_to_lb(ra, dec)
+    x, y, z = spherical_to_cartesian(lon, lat, distance)
+    return x, y, z
+
+
+def icrs_to_galactic_velocity[F: np.float64, S: tuple[Any, ...]](
+    pmracosdec: onp.ArrayND[F, S],
+    pmdec: onp.ArrayND[F, S],
+    radial_velocity: onp.ArrayND[F, S],
+    *,
+    ra: AngleArray[F, S],
+    dec: AngleArray[F, S],
+    distance: onp.ArrayND[F, S],
+) -> tuple[onp.ArrayND[np.float64, S], onp.ArrayND[np.float64, S], onp.ArrayND[np.float64, S]]:
+    """Transform from equatorial ICRS coordinates and proper motions to Galactic Cartesian velocities.
+
+    Parameters
+    ----------
+    pmracosdec : Array[float]
+        The proper motion in right ascension corrected by cos(dec) in mas/yr.
+    pmdec : Array[float]
+        The proper motion in declination in mas/yr.
+    radial_velocity : Array[float]
+        The radial velocity in km/s.
+    ra : AngleArray[float]
+        The right ascension in radians.
+    dec : AngleArray[float]
+        The declination in radians.
+    distance : Array[float]
+        The distance.
+
+    Returns
+    -------
+    vx : Array[f64]
+        The Galactic Cartesian x velocity.
+    vy : Array[f64]
+        The Galactic Cartesian y velocity.
+    vz : Array[f64]
+        The Galactic Cartesian z velocity.
+
+    """
+
+    lon, lat = radec_to_lb(ra, dec)
+    pmll, pmbb = pmrapmdec_to_pmllpmbb(pmracosdec, pmdec, ra=ra, dec=dec)
+    return vrpmllpmbb_to_vxvyvz(radial_velocity, pmll, pmbb, lon, lat, distance)
 
 
 def radec_to_lb[F: np.float64, S: tuple[Any, ...]](

@@ -7,6 +7,9 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from flame.units import AngleArray
+from .icrs import icrs_to_galactic_cartesian, icrs_to_galactic_velocity
+
 if TYPE_CHECKING:
     from optype import numpy as onp
 
@@ -152,3 +155,60 @@ class NumpyGalactocentricAdapter:
         gl_z = transform[2, 0] * vx + transform[2, 1] * vy + transform[2, 2] * vz + translation[2]
 
         return (gl_x, gl_y, gl_z)
+
+    def phase_space_from_icrs[F: np.float64, S: tuple[Any, ...]](
+        self,
+        ra: AngleArray[F, S],
+        dec: AngleArray[F, S],
+        distance: onp.ArrayND[F, S],
+        pmracosdec: onp.ArrayND[F, S],
+        pmdec: onp.ArrayND[F, S],
+        radial_velocity: onp.ArrayND[F, S],
+    ) -> tuple[
+        onp.ArrayND[np.float64, S],
+        onp.ArrayND[np.float64, S],
+        onp.ArrayND[np.float64, S],
+        onp.ArrayND[np.float64, S],
+        onp.ArrayND[np.float64, S],
+        onp.ArrayND[np.float64, S],
+    ]:
+        """Transform ICRS coordinates and proper motions to the Galactocentric frame.
+
+        Parameters
+        ----------
+        ra : AngleArray[float]
+            The right ascension.
+        dec : AngleArray[float]
+            The declination.
+        distance : Array[float]
+            The distance.
+        pmracosdec : Array[float]
+            The proper motion in right ascension corrected by cos(dec) in mas/yr.
+        pmdec : Array[float]
+            The proper motion in declination in mas/yr.
+        radial_velocity : Array[float]
+            The radial velocity in km/s.
+
+        Returns
+        -------
+        x : Array[f64]
+            The x coordinate.
+        y : Array[f64]
+            The y coordinate.
+        z : Array[f64]
+            The z coordinate.
+        vx : Array[f64]
+            The x velocity.
+        vy : Array[f64]
+            The y velocity.
+        vz : Array[f64]
+            The z velocity.
+
+        """
+        gl_x, gl_y, gl_z = icrs_to_galactic_cartesian(ra, dec, distance)
+        gl_vx, gl_vy, gl_vz = icrs_to_galactic_velocity(pmracosdec, pmdec, radial_velocity, ra=ra, dec=dec, distance=distance)
+
+        gc_x, gc_y, gc_z = self.position_from_galactic(gl_x, gl_y, gl_z)
+        gc_vx, gc_vy, gc_vz = self.velocity_from_galactic(gl_vx, gl_vy, gl_vz)
+
+        return (gc_x, gc_y, gc_z, gc_vx, gc_vy, gc_vz)

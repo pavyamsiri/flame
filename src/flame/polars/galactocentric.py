@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 import polars as pl
+
+from flame.units import AngleExpr
+
+from .icrs import icrs_to_galactic_cartesian, icrs_to_galactic_velocity
 
 if TYPE_CHECKING:
     from flame._galactocentric import AffineTransforms
@@ -139,3 +143,54 @@ class PolarsGalactocentricAdapter:
         gl_z = transform[2, 0] * vx + transform[2, 1] * vy + transform[2, 2] * vz + translation[2]
 
         return (gl_x, gl_y, gl_z)
+
+    def phase_space_from_icrs(
+        self, ra: AngleExpr, dec: AngleExpr, distance: pl.Expr, pmracosdec: pl.Expr, pmdec: pl.Expr, radial_velocity: pl.Expr
+    ) -> tuple[
+        pl.Expr,
+        pl.Expr,
+        pl.Expr,
+        pl.Expr,
+        pl.Expr,
+        pl.Expr,
+    ]:
+        """Transform ICRS coordinates and proper motions to the Galactocentric frame.
+
+        Parameters
+        ----------
+        ra : AngleExpr
+            The right ascension.
+        dec : AngleExpr
+            The declination.
+        distance : pl.Expr
+            The distance.
+        pmracosdec : pl.Expr
+            The proper motion in right ascension corrected by cos(dec) in mas/yr.
+        pmdec : pl.Expr
+            The proper motion in declination in mas/yr.
+        radial_velocity : pl.Expr
+            The radial velocity in km/s.
+
+        Returns
+        -------
+        x : pl.Expr
+            The x coordinate.
+        y : pl.Expr
+            The y coordinate.
+        z : pl.Expr
+            The z coordinate.
+        vx : pl.Expr
+            The x velocity.
+        vy : pl.Expr
+            The y velocity.
+        vz : pl.Expr
+            The z velocity.
+
+        """
+        gl_x, gl_y, gl_z = icrs_to_galactic_cartesian(ra, dec, distance)
+        gl_vx, gl_vy, gl_vz = icrs_to_galactic_velocity(pmracosdec, pmdec, radial_velocity, ra=ra, dec=dec, distance=distance)
+
+        gc_x, gc_y, gc_z = self.position_from_galactic(gl_x, gl_y, gl_z)
+        gc_vx, gc_vy, gc_vz = self.velocity_from_galactic(gl_vx, gl_vy, gl_vz)
+
+        return (gc_x, gc_y, gc_z, gc_vx, gc_vy, gc_vz)

@@ -9,7 +9,12 @@ from optype import numpy as onp
 
 from flame.units import AngleArray
 
-__all__: list[str] = ["spherical_to_cartesian", "cartesian_to_polar", "cartesian_vec_to_polar_vec"]
+__all__: list[str] = [
+    "spherical_to_cartesian",
+    "spherical_velocity_to_cartesian",
+    "cartesian_to_polar",
+    "cartesian_vec_to_polar_vec",
+]
 
 
 def spherical_to_cartesian[F: np.float64, S: tuple[Any, ...]](
@@ -47,6 +52,37 @@ def spherical_to_cartesian[F: np.float64, S: tuple[Any, ...]](
     y = cast(onp.ArrayND[np.float64, S], distance * cosb * sinl)
     z = cast(onp.ArrayND[np.float64, S], distance * sinb)
     return (x, y, z)
+
+
+def spherical_velocity_to_cartesian[F: np.float64, S: tuple[Any, ...]](
+    radial_velocity: onp.ArrayND[F, S],
+    longitude_velocity: onp.ArrayND[F, S],
+    latitude_velocity: onp.ArrayND[F, S],
+    lon: AngleArray[F, S],
+    lat: AngleArray[F, S],
+) -> tuple[onp.ArrayND[np.float64, S], onp.ArrayND[np.float64, S], onp.ArrayND[np.float64, S]]:
+    """Transform spherical velocity components to Cartesian velocity components.
+
+    ``longitude_velocity`` and ``latitude_velocity`` are tangential velocities
+    in the directions of increasing longitude and latitude, respectively.
+    """
+    lon_radians = lon.to_radians()
+    lat_radians = lat.to_radians()
+    sinl = np.sin(lon_radians)
+    cosl = np.cos(lon_radians)
+    sinb = np.sin(lat_radians)
+    cosb = np.cos(lat_radians)
+
+    vx = cast(
+        onp.ArrayND[np.float64, S],
+        radial_velocity * cosl * cosb - longitude_velocity * sinl - latitude_velocity * cosl * sinb,
+    )
+    vy = cast(
+        onp.ArrayND[np.float64, S],
+        radial_velocity * sinl * cosb + longitude_velocity * cosl - latitude_velocity * sinl * sinb,
+    )
+    vz = cast(onp.ArrayND[np.float64, S], radial_velocity * sinb + latitude_velocity * cosb)
+    return (vx, vy, vz)
 
 
 def cartesian_to_polar[F: np.float64, S: tuple[Any, ...]](

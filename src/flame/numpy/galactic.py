@@ -10,6 +10,7 @@ from optype import numpy as onp
 from flame.units import AngleArray
 from flame._galactic import MAS_PER_YR_TO_KM_PER_S_PER_KPC
 
+from .geometric import spherical_velocity_to_cartesian
 
 __all__: list[str] = ["vrpmllpmbb_to_vxvyvz"]
 
@@ -53,33 +54,6 @@ def vrpmllpmbb_to_vxvyvz[F: np.float64, S: tuple[Any, ...]](
         The velocity in the Galactic z direction in km/s.
 
     """
-    lon_radians = lon.to_radians()
-    lat_radians = lat.to_radians()
-    sinl = np.sin(lon_radians)
-    cosl = np.cos(lon_radians)
-    sinb = np.sin(lat_radians)
-    cosb = np.cos(lat_radians)
-
-    rotation_0_0 = cosl * cosb
-    rotation_1_0 = sinl * cosb
-    rotation_2_0 = sinb
-    rotation_0_1 = -sinl
-    rotation_1_1 = cosl
-    rotation_2_1 = 0
-    rotation_0_2 = -cosl * sinb
-    rotation_1_2 = -sinl * sinb
-    rotation_2_2 = cosb
-
-    v0 = vr
-    v1 = distance * pmll * MAS_PER_YR_TO_KM_PER_S_PER_KPC
-    v2 = distance * pmbb * MAS_PER_YR_TO_KM_PER_S_PER_KPC
-
-    # a b c   v0
-    # d e f * v1
-    # g h i   v2
-
-    vx = cast(onp.ArrayND[np.float64, S], rotation_0_0 * v0 + rotation_0_1 * v1 + rotation_0_2 * v2)
-    vy = cast(onp.ArrayND[np.float64, S], rotation_1_0 * v0 + rotation_1_1 * v1 + rotation_1_2 * v2)
-    vz = cast(onp.ArrayND[np.float64, S], rotation_2_0 * v0 + rotation_2_1 * v1 + rotation_2_2 * v2)
-
-    return (vx, vy, vz)
+    longitude_velocity = cast(onp.ArrayND[np.float64, S], distance * pmll * MAS_PER_YR_TO_KM_PER_S_PER_KPC)
+    latitude_velocity = cast(onp.ArrayND[np.float64, S], distance * pmbb * MAS_PER_YR_TO_KM_PER_S_PER_KPC)
+    return spherical_velocity_to_cartesian(vr, longitude_velocity, latitude_velocity, lon, lat)

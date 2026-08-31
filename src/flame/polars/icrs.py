@@ -9,9 +9,78 @@ import polars as pl
 
 from flame._icrs import DEC_NGP, RA_NGP, TRANSFORMATION_MATRIX
 from flame.units import AngleExpr
+from .geometric import spherical_to_cartesian
+from .galactic import vrpmllpmbb_to_vxvyvz
+
+__all__: list[str] = [
+    "radec_to_lb",
+    "pmrapmdec_to_pmllpmbb",
+    "icrs_to_galactic_cartesian",
+    "icrs_to_galactic_velocity",
+]
 
 
-__all__: list[str] = ["radec_to_lb", "pmrapmdec_to_pmllpmbb"]
+def icrs_to_galactic_cartesian(ra: AngleExpr, dec: AngleExpr, distance: pl.Expr) -> tuple[pl.Expr, pl.Expr, pl.Expr]:
+    """Transform from equatorial ICRS coordinates to Galactic Cartesian coordinates.
+
+    Parameters
+    ----------
+    ra : AngleExpr
+        The right ascension.
+    dec : AngleExpr
+        The declination.
+    distance : pl.Expr
+        The distance.
+
+    Returns
+    -------
+    x : pl.Expr
+        The Galactic Cartesian x coordinate.
+    y : pl.Expr
+        The Galactic Cartesian y coordinate.
+    z : pl.Expr
+        The Galactic Cartesian z coordinate.
+
+    """
+    lon, lat = radec_to_lb(ra, dec)
+    x, y, z = spherical_to_cartesian(lon, lat, distance)
+    return x, y, z
+
+
+def icrs_to_galactic_velocity(
+    pmracosdec: pl.Expr, pmdec: pl.Expr, radial_velocity: pl.Expr, *, ra: AngleExpr, dec: AngleExpr, distance: pl.Expr
+) -> tuple[pl.Expr, pl.Expr, pl.Expr]:
+    """Transform from equatorial ICRS coordinates and proper motions to Galactic Cartesian velocities.
+
+    Parameters
+    ----------
+    pmracosdec : pl.Expr
+        The proper motion in right ascension corrected by cos(dec) in mas/yr.
+    pmdec : pl.Expr
+        The proper motion in declination in mas/yr.
+    radial_velocity : pl.Expr
+        The radial velocity in km/s.
+    ra : AngleExpr
+        The right ascension in radians.
+    dec : AngleExpr
+        The declination in radians.
+    distance : pl.Expr
+        The distance.
+
+    Returns
+    -------
+    vx : pl.Expr
+        The Galactic Cartesian x velocity.
+    vy : pl.Expr
+        The Galactic Cartesian y velocity.
+    vz : pl.Expr
+        The Galactic Cartesian z velocity.
+
+    """
+
+    lon, lat = radec_to_lb(ra, dec)
+    pmll, pmbb = pmrapmdec_to_pmllpmbb(pmracosdec, pmdec, ra=ra, dec=dec)
+    return vrpmllpmbb_to_vxvyvz(radial_velocity, pmll, pmbb, lon, lat, distance)
 
 
 def radec_to_lb(ra: AngleExpr, dec: AngleExpr) -> tuple[AngleExpr, AngleExpr]:

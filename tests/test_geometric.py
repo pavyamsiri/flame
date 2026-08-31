@@ -10,8 +10,10 @@ from hypothesis import strategies as st
 
 from flame.numpy.geometric import cartesian_to_polar as cartesian_to_polar_numpy
 from flame.numpy.geometric import cartesian_vec_to_polar_vec as cartesian_vec_to_polar_vec_numpy
+from flame.numpy.geometric import spherical_velocity_to_cartesian as spherical_velocity_to_cartesian_numpy
 from flame.polars.geometric import cartesian_to_polar as cartesian_to_polar_polars
 from flame.polars.geometric import cartesian_vec_to_polar_vec as cartesian_vec_to_polar_vec_polars
+from flame.polars.geometric import spherical_velocity_to_cartesian as spherical_velocity_to_cartesian_polars
 from flame.units import AngleArray, AngleExpr
 
 _ABS_TOL: float = 1e-21
@@ -78,3 +80,56 @@ def test_cartesian_vec_to_polar_vec(vx: float, vy: float, phi: float) -> None:
     np.testing.assert_allclose(data["vphi"].to_numpy(), gal_vphi)
     np.testing.assert_allclose(fl_vr, gal_vr)
     np.testing.assert_allclose(fl_vphi, gal_vphi)
+
+
+@given(
+    radial_velocity=st.floats(min_value=-1e9, max_value=1e9),
+    longitude_velocity=st.floats(min_value=-1e9, max_value=1e9),
+    latitude_velocity=st.floats(min_value=-1e9, max_value=1e9),
+    lon=st.floats(min_value=0, max_value=2 * np.pi),
+    lat=st.floats(min_value=-np.pi / 2, max_value=np.pi / 2),
+)
+def test_spherical_velocity_to_cartesian(
+    radial_velocity: float, longitude_velocity: float, latitude_velocity: float, lon: float, lat: float
+) -> None:
+    data = pl.DataFrame(
+        {
+            "radial_velocity": [radial_velocity],
+            "longitude_velocity": [longitude_velocity],
+            "latitude_velocity": [latitude_velocity],
+            "lon": [lon],
+            "lat": [lat],
+        }
+    )
+    vx_expr, vy_expr, vz_expr = spherical_velocity_to_cartesian_polars(
+        pl.col("radial_velocity"),
+        pl.col("longitude_velocity"),
+        pl.col("latitude_velocity"),
+        AngleExpr(pl.col("lon"), "rad"),
+        AngleExpr(pl.col("lat"), "rad"),
+    )
+    data = data.with_columns(vx_expr.alias("vx"), vy_expr.alias("vy"), vz_expr.alias("vz"))
+
+    radial_velocity_arr = np.array([radial_velocity], dtype=np.float64)
+    longitude_velocity_arr = np.array([longitude_velocity], dtype=np.float64)
+    latitude_velocity_arr = np.array([latitude_velocity], dtype=np.float64)
+    lon_arr = np.array([lon], dtype=np.float64)
+    lat_arr = np.array([lat], dtype=np.float64)
+    vx, vy, vz = spherical_velocity_to_cartesian_numpy(
+        radial_velocity_arr,
+        longitude_velocity_arr,
+        latitude_velocity_arr,
+        AngleArray(lon_arr, "rad"),
+        AngleArray(lat_arr, "rad"),
+    )
+
+    expected_vx = radial_velocity * np.cos(lon) * np.cos(lat) - longitude_velocity * np.sin(lon) - latitude_velocity * np.cos(lon) * np.sin(lat)
+    expected_vy = radial_velocity * np.sin(lon) * np.cos(lat) + longitude_velocity * np.cos(lon) - latitude_velocity * np.sin(lon) * np.sin(lat)
+    expected_vz = radial_velocity * np.sin(lat) + latitude_velocity * np.cos(lat)
+
+    np.testing.assert_allclose(data["vx"], vx)
+    np.testing.assert_allclose(data["vy"], vy)
+    np.testing.assert_allclose(data["vz"], vz)
+    np.testing.assert_allclose(vx, expected_vx)
+    np.testing.assert_allclose(vy, expected_vy)
+    np.testing.assert_allclose(vz, expected_vz)

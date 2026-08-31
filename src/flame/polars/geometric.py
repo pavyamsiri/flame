@@ -7,7 +7,12 @@ import polars as pl
 
 from flame.units import AngleExpr
 
-__all__: list[str] = ["spherical_to_cartesian", "cartesian_to_polar", "cartesian_vec_to_polar_vec"]
+__all__: list[str] = [
+    "spherical_to_cartesian",
+    "spherical_velocity_to_cartesian",
+    "cartesian_to_polar",
+    "cartesian_vec_to_polar_vec",
+]
 
 
 def spherical_to_cartesian(lon: AngleExpr, lat: AngleExpr, distance: pl.Expr) -> tuple[pl.Expr, pl.Expr, pl.Expr]:
@@ -43,6 +48,31 @@ def spherical_to_cartesian(lon: AngleExpr, lat: AngleExpr, distance: pl.Expr) ->
     y = distance * cosb * sinl
     z = distance * sinb
     return (x, y, z)
+
+
+def spherical_velocity_to_cartesian(
+    radial_velocity: pl.Expr,
+    longitude_velocity: pl.Expr,
+    latitude_velocity: pl.Expr,
+    lon: AngleExpr,
+    lat: AngleExpr,
+) -> tuple[pl.Expr, pl.Expr, pl.Expr]:
+    """Transform spherical velocity components to Cartesian velocity components.
+
+    ``longitude_velocity`` and ``latitude_velocity`` are tangential velocities
+    in the directions of increasing longitude and latitude, respectively.
+    """
+    lon_radians = lon.to_radians()
+    lat_radians = lat.to_radians()
+    sinl = lon_radians.sin()
+    cosl = lon_radians.cos()
+    sinb = lat_radians.sin()
+    cosb = lat_radians.cos()
+
+    vx = radial_velocity * cosl * cosb - longitude_velocity * sinl - latitude_velocity * cosl * sinb
+    vy = radial_velocity * sinl * cosb + longitude_velocity * cosl - latitude_velocity * sinl * sinb
+    vz = radial_velocity * sinb + latitude_velocity * cosb
+    return (vx, vy, vz)
 
 
 def cartesian_to_polar(x: pl.Expr, y: pl.Expr) -> tuple[pl.Expr, AngleExpr]:

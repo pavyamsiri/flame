@@ -8,8 +8,14 @@ from hypothesis import strategies as st
 
 from flame.numpy.icrs import pmrapmdec_to_pmllpmbb as pmrapmdec_to_pmllpmbb_numpy
 from flame.numpy.icrs import radec_to_lb as radec_to_lb_numpy
+from flame.numpy.icrs import icrs_to_galactic_cartesian as icrs_to_galactic_cartesian_numpy
+from flame.numpy.icrs import icrs_to_galactic_velocity as icrs_to_galactic_velocity_numpy
 from flame.polars.icrs import pmrapmdec_to_pmllpmbb as pmrapmdec_to_pmllpmbb_polars
 from flame.polars.icrs import radec_to_lb as radec_to_lb_polars
+from flame.polars.icrs import icrs_to_galactic_cartesian as icrs_to_galactic_cartesian_polars
+from flame.polars.icrs import icrs_to_galactic_velocity as icrs_to_galactic_velocity_polars
+from flame.numpy.galactic import vrpmllpmbb_to_vxvyvz as vrpmllpmbb_to_vxvyvz_numpy
+from flame.numpy.geometric import spherical_to_cartesian as spherical_to_cartesian_numpy
 from flame.units import AngleArray, AngleExpr
 
 
@@ -81,3 +87,79 @@ def test_pmrapmdec_to_pmllpmbb(pmra: float, pmdec: float, ra: float, dec: float)
     np.testing.assert_allclose(data["pmbb"].to_numpy(), gl_pmbb)
     np.testing.assert_allclose(fl_pmll, gl_pmll)
     np.testing.assert_allclose(fl_pmbb, gl_pmbb)
+
+
+@given(
+    ra=st.floats(min_value=0, max_value=2 * np.pi),
+    dec=st.floats(min_value=-np.pi / 2, max_value=np.pi / 2),
+    distance=st.floats(min_value=0, max_value=1e6),
+)
+def test_icrs_to_galactic_cartesian(ra: float, dec: float, distance: float) -> None:
+    data = pl.DataFrame({"ra": [ra], "dec": [dec], "distance": [distance]})
+    polars_actual = icrs_to_galactic_cartesian_polars(
+        AngleExpr(pl.col("ra"), "rad"), AngleExpr(pl.col("dec"), "rad"), pl.col("distance")
+    )
+    data = data.with_columns(*(expression.alias(name) for expression, name in zip(polars_actual, ("x", "y", "z"), strict=True)))
+
+    ra_array = AngleArray(np.array([ra], dtype=np.float64), "rad")
+    dec_array = AngleArray(np.array([dec], dtype=np.float64), "rad")
+    distance_array = np.array([distance], dtype=np.float64)
+    actual = icrs_to_galactic_cartesian_numpy(ra_array, dec_array, distance_array)
+    lon, lat = radec_to_lb_numpy(ra_array, dec_array)
+    expected = spherical_to_cartesian_numpy(lon, lat, distance_array)
+
+    np.testing.assert_allclose(actual, expected)
+    np.testing.assert_allclose(data.select("x", "y", "z").to_numpy().T, actual)
+
+
+@given(
+    pmra=st.floats(min_value=-1e6, max_value=1e6),
+    pmdec=st.floats(min_value=-1e6, max_value=1e6),
+    radial_velocity=st.floats(min_value=-1e6, max_value=1e6),
+    ra=st.floats(min_value=0, max_value=2 * np.pi),
+    dec=st.floats(min_value=-np.pi / 2, max_value=np.pi / 2),
+    distance=st.floats(min_value=0, max_value=1e6),
+)
+def test_icrs_to_galactic_velocity(
+    pmra: float, pmdec: float, radial_velocity: float, ra: float, dec: float, distance: float
+) -> None:
+    data = pl.DataFrame(
+        {
+            "pmra": [pmra * np.cos(dec)],
+            "pmdec": [pmdec],
+            "radial_velocity": [radial_velocity],
+            "ra": [ra],
+            "dec": [dec],
+            "distance": [distance],
+        }
+    )
+    polars_actual = icrs_to_galactic_velocity_polars(
+        pl.col("pmra"),
+        pl.col("pmdec"),
+        pl.col("radial_velocity"),
+        ra=AngleExpr(pl.col("ra"), "rad"),
+        dec=AngleExpr(pl.col("dec"), "rad"),
+        distance=pl.col("distance"),
+    )
+    data = data.with_columns(*(expression.alias(name) for expression, name in zip(polars_actual, ("vx", "vy", "vz"), strict=True)))
+
+    pmra_array = np.array([pmra * np.cos(dec)], dtype=np.float64)
+    pmdec_array = np.array([pmdec], dtype=np.float64)
+    radial_velocity_array = np.array([radial_velocity], dtype=np.float64)
+    ra_array = AngleArray(np.array([ra], dtype=np.float64), "rad")
+    dec_array = AngleArray(np.array([dec], dtype=np.float64), "rad")
+    distance_array = np.array([distance], dtype=np.float64)
+    actual = icrs_to_galactic_velocity_numpy(
+        pmra_array,
+        pmdec_array,
+        radial_velocity_array,
+        ra=ra_array,
+        dec=dec_array,
+        distance=distance_array,
+    )
+    lon, lat = radec_to_lb_numpy(ra_array, dec_array)
+    pmll, pmbb = pmrapmdec_to_pmllpmbb_numpy(pmra_array, pmdec_array, ra=ra_array, dec=dec_array)
+    expected = vrpmllpmbb_to_vxvyvz_numpy(radial_velocity_array, pmll, pmbb, lon, lat, distance_array)
+
+    np.testing.assert_allclose(actual, expected)
+    np.testing.assert_allclose(data.select("vx", "vy", "vz").to_numpy().T, actual)
