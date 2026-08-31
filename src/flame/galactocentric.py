@@ -32,12 +32,21 @@ GALCEN_EXTRA_ROT: Final[onp.Array2D[np.float64]] = np.array(
     dtype=np.float64,
 )
 
-# Applying this reflection to the right-handed output basis produces the
-# historical (and galpy-compatible) left-handed Galactocentric convention.
-_LEFT_HANDED_REFLECTION: Final[onp.Array2D[np.float64]] = np.array(
+# A 180 degree rotation around the z axis to preserve right-handed convention.
+_RIGHT_HANDED_ORIENTATION: Final[onp.Array2D[np.float64]] = np.array(
     [
-        [1, 0, 0],
+        [-1, 0, 0],
         [0, -1, 0],
+        [0, 0, 1],
+    ],
+    dtype=np.float64,
+)
+
+# A flip along the x-axis to get the left-handed convention.
+_LEFT_HANDED_ORIENTATION: Final[onp.Array2D[np.float64]] = np.array(
+    [
+        [-1, 0, 0],
+        [0, 1, 0],
         [0, 0, 1],
     ],
     dtype=np.float64,
@@ -67,13 +76,17 @@ class GalactocentricFrame:
         sun_vx: float = DEFAULT_SUN_VX,
         sun_vy: float = DEFAULT_SUN_VY,
         sun_vz: float = DEFAULT_SUN_VZ,
+        *,
+        handedness: Literal["left", "right"] = "right",
     ) -> None:
+        assert handedness in ("left", "right"), "`handedness `must be either `left` or `right`"
         self._sun_x: float = sun_x
         self._sun_y: float = sun_y
         self._sun_z: float = sun_z
         self._sun_vx: float = sun_vx
         self._sun_vy: float = sun_vy
         self._sun_vz: float = sun_vz
+        self._handedness: Literal["left", "right"] = handedness
 
         self.transforms: _AffineTransforms
         self._update_transforms()
@@ -86,11 +99,18 @@ class GalactocentricFrame:
             self._sun_vx,
             self._sun_vy,
             self._sun_vz,
+            self._handedness,
         )
 
     @staticmethod
     def _compute_affine_transform(
-        sun_x: float, sun_y: float, sun_z: float, sun_vx: float, sun_vy: float, sun_vz: float
+        sun_x: float,
+        sun_y: float,
+        sun_z: float,
+        sun_vx: float,
+        sun_vy: float,
+        sun_vz: float,
+        handedness: Literal["left", "right"],
     ) -> _AffineTransforms:
         sun_r: float = np.hypot(sun_x, sun_y)
         x_sign = 1 if sun_x >= 0 else -1
@@ -121,21 +141,14 @@ class GalactocentricFrame:
             dtype=np.float64,
         )
 
-        orientation_matrix = np.array(
-            [
-                [-1, 0, 0],
-                [0, -1, 0],
-                [0, 0, 1],
-            ],
-            dtype=np.float64,
-        )
+        orientation_matrix = _RIGHT_HANDED_ORIENTATION if handedness == "right" else _LEFT_HANDED_ORIENTATION
         pos_matrix = rxz_matrix @ orientation_matrix @ GALCEN_EXTRA_ROT @ rxy_matrix.T
         pos_translation = np.array([sun_x, sun_y, sun_z])
         pos_matrix_inv = np.linalg.inv(pos_matrix)
         pos_translation_inv = -pos_matrix_inv @ pos_translation
 
         vel_matrix = pos_matrix
-        vel_matrix_inv = np.linalg.inv(vel_matrix)
+        vel_matrix_inv = pos_matrix_inv
         vel_translation = np.array([sun_vx, sun_vy, sun_vz])
         vel_translation_inv = -vel_matrix_inv @ vel_translation
 
@@ -178,40 +191,11 @@ class GalactocentricFrame:
     def sun_rxy(self) -> float:
         return np.sqrt(self._sun_x**2 + self._sun_y**2)
 
-    @staticmethod
-    def matrix_for_handedness(matrix: onp.Array2D[np.float64], handedness: Literal["right", "left"]) -> onp.Array2D[np.float64]:
-        if handedness == "right":
-            return matrix
-        if handedness == "left":
-            return _LEFT_HANDED_REFLECTION @ matrix
-        msg = f"Unsupported handedness: {handedness!r}"
-        raise ValueError(msg)
-
-    def _position_transform(
-        self, handedness: Literal["right", "left"], *, inverse: bool = False
-    ) -> tuple[onp.Array2D[np.float64], onp.Array2D[np.float64]]:
-        matrix = self.matrix_for_handedness(self.transforms.pos_matrix, handedness)
-        if inverse:
-            inverse_matrix: onp.Array2D[np.float64] = np.linalg.inv(matrix).astype(np.float64)
-            return (inverse_matrix, -inverse_matrix @ self.transforms.pos_translation)
-        return (matrix, self.transforms.pos_translation)
-
-    def _velocity_transform(
-        self, handedness: Literal["right", "left"], *, inverse: bool = False
-    ) -> tuple[onp.Array2D[np.float64], onp.Array2D[np.float64]]:
-        matrix = self.matrix_for_handedness(self.transforms.vel_matrix, handedness)
-        if inverse:
-            inverse_matrix: onp.Array2D[np.float64] = np.linalg.inv(matrix).astype(np.float64)
-            return (inverse_matrix, -inverse_matrix @ self.transforms.vel_translation)
-        return (matrix, self.transforms.vel_translation)
-
     def gl_xyz_to_gc_xyz_numpy(
         self,
         u: onp.ArrayND[_Float, _Shape],
         v: onp.ArrayND[_Float, _Shape],
         w: onp.ArrayND[_Float, _Shape],
-        *,
-        handedness: Literal["right", "left"] = "right",
     ) -> tuple[onp.ArrayND[np.float64, _Shape], onp.ArrayND[np.float64, _Shape], onp.ArrayND[np.float64, _Shape]]:
         """Transform Cartesian coordinates in the Galactic frame to the Galactocentric frame.
 
@@ -223,8 +207,6 @@ class GalactocentricFrame:
             The y coordinate in the Galactic frame.
         w : Array[f64]
             The z coordinate in the Galactic frame.
-        handedness : "left" or "right"
-            The handedness of the coordinate system.
 
         Returns
         -------
@@ -235,7 +217,8 @@ class GalactocentricFrame:
         gc_z : Array[f64]
             The z coordinate in the Galactocentric frame.
         """
-        transform, translation = self._position_transform(handedness)
+        transform = self.transforms.pos_matrix
+        translation = self.transforms.pos_translation
 
         gc_x = transform[0, 0] * u + transform[0, 1] * v + transform[0, 2] * w + translation[0]
         gc_y = transform[1, 0] * u + transform[1, 1] * v + transform[1, 2] * w + translation[1]
@@ -258,8 +241,6 @@ class GalactocentricFrame:
         gc_x: onp.ArrayND[_Float, _Shape],
         gc_y: onp.ArrayND[_Float, _Shape],
         gc_z: onp.ArrayND[_Float, _Shape],
-        *,
-        handedness: Literal["right", "left"] = "right",
     ) -> tuple[onp.ArrayND[np.float64, _Shape], onp.ArrayND[np.float64, _Shape], onp.ArrayND[np.float64, _Shape]]:
         """Transform Cartesian coordinates in the Galactocentic frame to the Galactic frame.
 
@@ -271,8 +252,6 @@ class GalactocentricFrame:
             The y coordinate in the Galactocentric frame.
         z : Array[f64]
             The z coordinate in the Galactocentric frame.
-        handedness : "left" or "right"
-            The handedness of the coordinate system.
 
         Returns
         -------
@@ -284,7 +263,8 @@ class GalactocentricFrame:
             The z coordinate in the Galactic frame.
         """
 
-        transform, translation = self._position_transform(handedness, inverse=True)
+        transform = self.transforms.pos_matrix_inv
+        translation = self.transforms.pos_translation_inv
 
         gl_x = transform[0, 0] * gc_x + transform[0, 1] * gc_y + transform[0, 2] * gc_z + translation[0]
         gl_y = transform[1, 0] * gc_x + transform[1, 1] * gc_y + transform[1, 2] * gc_z + translation[1]
@@ -296,8 +276,6 @@ class GalactocentricFrame:
         u: pl.Expr,
         v: pl.Expr,
         w: pl.Expr,
-        *,
-        handedness: Literal["right", "left"] = "right",
     ) -> tuple[pl.Expr, pl.Expr, pl.Expr]:
         """Transform Cartesian coordinates in the Galactic frame to the Galactocentric frame.
 
@@ -309,8 +287,6 @@ class GalactocentricFrame:
             The y coordinate in the Galactic frame.
         w : pl.Expr
             The z coordinate in the Galactic frame.
-        handedness : "left" or "right"
-            The handedness of the coordinate system.
 
         Returns
         -------
@@ -321,7 +297,8 @@ class GalactocentricFrame:
         gc_z : pl.Expr
             The z coordinate in the Galactocentric frame.
         """
-        transform, translation = self._position_transform(handedness)
+        transform = self.transforms.pos_matrix
+        translation = self.transforms.pos_translation
 
         gc_x = transform[0, 0] * u + transform[0, 1] * v + transform[0, 2] * w + translation[0]
         gc_y = transform[1, 0] * u + transform[1, 1] * v + transform[1, 2] * w + translation[1]
@@ -334,8 +311,6 @@ class GalactocentricFrame:
         x: pl.Expr,
         y: pl.Expr,
         z: pl.Expr,
-        *,
-        handedness: Literal["right", "left"] = "right",
     ) -> tuple[pl.Expr, pl.Expr, pl.Expr]:
         """Transform Cartesian coordinates in the Galactocentric frame to the Galactic frame.
 
@@ -359,7 +334,8 @@ class GalactocentricFrame:
         gl_z : pl.Expr
             The z coordinate in the Galactic frame.
         """
-        transform, translation = self._position_transform(handedness, inverse=True)
+        transform = self.transforms.pos_matrix_inv
+        translation = self.transforms.pos_translation_inv
 
         gl_x = transform[0, 0] * x + transform[0, 1] * y + transform[0, 2] * z + translation[0]
         gl_y = transform[1, 0] * x + transform[1, 1] * y + transform[1, 2] * z + translation[1]
@@ -372,8 +348,6 @@ class GalactocentricFrame:
         v_u: onp.ArrayND[_Float, _Shape],
         v_v: onp.ArrayND[_Float, _Shape],
         v_w: onp.ArrayND[_Float, _Shape],
-        *,
-        handedness: Literal["right", "left"] = "right",
     ) -> tuple[onp.ArrayND[np.float64, _Shape], onp.ArrayND[np.float64, _Shape], onp.ArrayND[np.float64, _Shape]]:
         """Transform Cartesian coordinates in the Galactic frame to the Galactocentric frame.
 
@@ -385,9 +359,6 @@ class GalactocentricFrame:
             The y-velocity in the Galactic frame.
         vz : Array[f64]
             The z-velocity in the Galactic frame.
-        handedness : "left" or "right"
-            The handedness of the coordinate system.
-
         Returns
         -------
         gc_vx : Array[f64]
@@ -397,7 +368,8 @@ class GalactocentricFrame:
         gc_vz : Array[f64]
             The z-velocity in the Galactocentric frame.
         """
-        transform, translation = self._velocity_transform(handedness)
+        transform = self.transforms.vel_matrix
+        translation = self.transforms.vel_translation
 
         gc_x = transform[0, 0] * v_u + transform[0, 1] * v_v + transform[0, 2] * v_w + translation[0]
         gc_y = transform[1, 0] * v_u + transform[1, 1] * v_v + transform[1, 2] * v_w + translation[1]
@@ -410,8 +382,6 @@ class GalactocentricFrame:
         vx: onp.ArrayND[_Float, _Shape],
         vy: onp.ArrayND[_Float, _Shape],
         vz: onp.ArrayND[_Float, _Shape],
-        *,
-        handedness: Literal["right", "left"] = "right",
     ) -> tuple[onp.ArrayND[np.float64, _Shape], onp.ArrayND[np.float64, _Shape], onp.ArrayND[np.float64, _Shape]]:
         """Transform Cartesian velocities in the Galactocentric frame to the Galactic frame.
 
@@ -423,9 +393,6 @@ class GalactocentricFrame:
             The y-velocity in the Galactocentric frame.
         vz : Array[f64]
             The z-velocity in the Galactocentric frame.
-        handedness : "left" or "right"
-            The handedness of the coordinate system.
-
         Returns
         -------
         gl_vx : Array[f64]
@@ -435,7 +402,8 @@ class GalactocentricFrame:
         gl_vz : Array[f64]
             The z-velocity in the Galactic frame.
         """
-        transform, translation = self._velocity_transform(handedness, inverse=True)
+        transform = self.transforms.vel_matrix_inv
+        translation = self.transforms.vel_translation_inv
 
         gl_x = transform[0, 0] * vx + transform[0, 1] * vy + transform[0, 2] * vz + translation[0]
         gl_y = transform[1, 0] * vx + transform[1, 1] * vy + transform[1, 2] * vz + translation[1]
@@ -448,8 +416,6 @@ class GalactocentricFrame:
         v_u: pl.Expr,
         v_v: pl.Expr,
         v_w: pl.Expr,
-        *,
-        handedness: Literal["right", "left"] = "right",
     ) -> tuple[pl.Expr, pl.Expr, pl.Expr]:
         """Transform Cartesian coordinates in the Galactic frame to the Galactocentric frame.
 
@@ -461,9 +427,6 @@ class GalactocentricFrame:
             The y-velocity in the Galactic frame.
         vz : pl.Expr
             The z-velocity in the Galactic frame.
-        handedness : "left" or "right"
-            The handedness of the coordinate system.
-
         Returns
         -------
         gc_vx : pl.Expr
@@ -474,7 +437,8 @@ class GalactocentricFrame:
             The z-velocity in the Galactocentric frame.
 
         """
-        transform, translation = self._velocity_transform(handedness)
+        transform = self.transforms.vel_matrix
+        translation = self.transforms.vel_translation
 
         gc_x = transform[0, 0] * v_u + transform[0, 1] * v_v + transform[0, 2] * v_w + translation[0]
         gc_y = transform[1, 0] * v_u + transform[1, 1] * v_v + transform[1, 2] * v_w + translation[1]
@@ -487,8 +451,6 @@ class GalactocentricFrame:
         vx: pl.Expr,
         vy: pl.Expr,
         vz: pl.Expr,
-        *,
-        handedness: Literal["right", "left"] = "right",
     ) -> tuple[pl.Expr, pl.Expr, pl.Expr]:
         """Transform Cartesian velocities in the Galactocentric frame to the Galactic frame.
 
@@ -500,9 +462,6 @@ class GalactocentricFrame:
             The y-velocity in the Galactocentric frame.
         vz : pl.Expr
             The z-velocity in the Galactocentric frame.
-        handedness : "left" or "right"
-            The handedness of the coordinate system.
-
         Returns
         -------
         gl_vx : pl.Expr
@@ -512,7 +471,8 @@ class GalactocentricFrame:
         gl_vz : pl.Expr
             The z-velocity in the Galactic frame.
         """
-        transform, translation = self._velocity_transform(handedness, inverse=True)
+        transform = self.transforms.vel_matrix_inv
+        translation = self.transforms.vel_translation_inv
 
         gl_x = transform[0, 0] * vx + transform[0, 1] * vy + transform[0, 2] * vz + translation[0]
         gl_y = transform[1, 0] * vx + transform[1, 1] * vy + transform[1, 2] * vz + translation[1]
@@ -543,13 +503,11 @@ def _check(frame: GalactocentricFrame, u: float, v: float, w: float) -> None:
         }
     )
 
-    np_x, np_y, np_z = frame.gl_xyz_to_gc_xyz_numpy(gl_x, gl_y, gl_z, handedness="right")
+    np_x, np_y, np_z = frame.gl_xyz_to_gc_xyz_numpy(gl_x, gl_y, gl_z)
     np_x = np.round(np_x, _DECIMAL)
     np_y = np.round(np_y, _DECIMAL)
     np_z = np.round(np_z, _DECIMAL)
-    pl_x_expr, pl_y_expr, pl_z_expr = frame.gl_xyz_to_gc_xyz_polars(
-        pl.col("gl_x"), pl.col("gl_y"), pl.col("gl_z"), handedness="right"
-    )
+    pl_x_expr, pl_y_expr, pl_z_expr = frame.gl_xyz_to_gc_xyz_polars(pl.col("gl_x"), pl.col("gl_y"), pl.col("gl_z"))
 
     gal_xyz = galcoords.XYZ_to_galcenrect(
         gl_x, x_sign * gl_y, gl_z, Xsun=x_sign * frame.sun_rxy(), Zsun=frame.sun_z(), _extra_rot=True
