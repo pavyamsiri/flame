@@ -59,7 +59,7 @@ def spherical_to_cartesian(lon: AngleExpr, lat: AngleExpr, distance: pl.Expr) ->
 def cartesian_to_spherical(x: pl.Expr, y: pl.Expr, z: pl.Expr) -> tuple[AngleExpr, AngleExpr, pl.Expr]:
     """Transform Cartesian coordinates to spherical coordinates.
 
-    Longitudes are wrapped to ``[0, 2π)``. At the origin the direction is
+    Longitudes are wrapped to ``[0, 2 * pi)``. At the origin the direction is
     undefined; Polars' ``arctan2(0, 0)`` convention yields zero angles.
     """
     rxy = (x**2 + y**2).sqrt()
@@ -170,7 +170,7 @@ def cartesian_vec_to_polar_vec(vx: pl.Expr, vy: pl.Expr, phi: AngleExpr) -> tupl
 def cartesian_to_cylindrical(x: pl.Expr, y: pl.Expr, z: pl.Expr) -> tuple[pl.Expr, AngleExpr, pl.Expr]:
     """Transform Cartesian positions to cylindrical ``(radius, phi, z)`` coordinates.
 
-    ``phi`` is wrapped to ``[0, 2π)``. Its value at the z axis is defined as
+    ``phi`` is wrapped to ``[0, 2 * pi)``. Its value at the z axis is defined as
     zero because the azimuth is otherwise undefined.
     """
     radius, phi = cartesian_to_polar(x, y)

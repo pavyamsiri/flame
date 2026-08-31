@@ -471,7 +471,8 @@ def test_collinear_polars(
     w=st.floats(min_value=-100, max_value=100),
 )
 def test_gl_xyz_to_gc_xyz_galpy(frame: GalactocentricFrame, u: float, v: float, w: float) -> None:
-    assume(frame.sun_rxy() > 0)
+    # galpy's reference rotation becomes numerically unstable as Xsun tends to zero.
+    assume(frame.sun_rxy() > 1e-3)
     frame = with_handedness(frame, "left")
     gl_x = np.full(1, u)
     gl_y = np.full(1, v)
@@ -520,7 +521,8 @@ def test_gl_xyz_to_gc_xyz_galpy(frame: GalactocentricFrame, u: float, v: float, 
     v_w=st.floats(min_value=-100, max_value=100),
 )
 def test_gl_vxvyvz_to_gc_vxvyvz_galpy(frame: GalactocentricFrame, v_u: float, v_v: float, v_w: float) -> None:
-    assume(frame.sun_rxy() > 0)
+    # galpy's reference rotation becomes numerically unstable as Xsun tends to zero.
+    assume(frame.sun_rxy() > 1e-3)
     frame = with_handedness(frame, "left")
     gl_vx = np.full(1, v_u)
     gl_vy = np.full(1, v_v)

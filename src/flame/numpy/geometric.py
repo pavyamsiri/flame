@@ -67,7 +67,7 @@ def cartesian_to_spherical[F: np.float64, S: tuple[Any, ...]](
 ) -> tuple[AngleArray[np.float64, S], AngleArray[np.float64, S], onp.ArrayND[np.float64, S]]:
     """Transform Cartesian coordinates to spherical coordinates.
 
-    Longitudes are wrapped to ``[0, 2π)``. At the origin the direction is
+    Longitudes are wrapped to ``[0, 2 * pi)``. At the origin the direction is
     undefined; this function returns longitude and latitude equal to zero.
     """
     rxy = np.hypot(x, y)
@@ -196,7 +196,7 @@ def cartesian_to_cylindrical[F: np.float64, S: tuple[Any, ...]](
 ) -> tuple[onp.ArrayND[np.float64, S], AngleArray[np.float64, S], onp.ArrayND[F, S]]:
     """Transform Cartesian positions to cylindrical ``(radius, phi, z)`` coordinates.
 
-    ``phi`` is wrapped to ``[0, 2π)``. Its value at the z axis is defined as
+    ``phi`` is wrapped to ``[0, 2 * pi)``. Its value at the z axis is defined as
     zero because the azimuth is otherwise undefined.
     """
     radius, phi = cartesian_to_polar(x, y)
