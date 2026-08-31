@@ -3,15 +3,19 @@ from __future__ import annotations
 import numpy as np
 import polars as pl
 from galpy.util import coords as galcoords  # pyright: ignore[reportMissingTypeStubs]
-from hypothesis import given
+from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from flame.numpy.icrs import pmrapmdec_to_pmllpmbb as pmrapmdec_to_pmllpmbb_numpy
+from flame.numpy.icrs import pmllpmbb_to_pmrapmdec as pmllpmbb_to_pmrapmdec_numpy
 from flame.numpy.icrs import radec_to_lb as radec_to_lb_numpy
+from flame.numpy.icrs import lb_to_radec as lb_to_radec_numpy
 from flame.numpy.icrs import icrs_to_galactic_cartesian as icrs_to_galactic_cartesian_numpy
 from flame.numpy.icrs import icrs_to_galactic_velocity as icrs_to_galactic_velocity_numpy
 from flame.polars.icrs import pmrapmdec_to_pmllpmbb as pmrapmdec_to_pmllpmbb_polars
+from flame.polars.icrs import pmllpmbb_to_pmrapmdec as pmllpmbb_to_pmrapmdec_polars
 from flame.polars.icrs import radec_to_lb as radec_to_lb_polars
+from flame.polars.icrs import lb_to_radec as lb_to_radec_polars
 from flame.polars.icrs import icrs_to_galactic_cartesian as icrs_to_galactic_cartesian_polars
 from flame.polars.icrs import icrs_to_galactic_velocity as icrs_to_galactic_velocity_polars
 from flame.numpy.galactic import vrpmllpmbb_to_vxvyvz as vrpmllpmbb_to_vxvyvz_numpy
@@ -47,6 +51,24 @@ def test_radec_to_lb(ra: float, dec: float) -> None:
     np.testing.assert_allclose(fl_lat.to_radians(), gl_lat)
 
 
+@given(
+    lon=st.floats(min_value=0, max_value=2 * np.pi),
+    lat=st.floats(min_value=-np.pi / 2 + 1e-8, max_value=np.pi / 2 - 1e-8),
+)
+def test_lb_to_radec(lon: float, lat: float) -> None:
+    data = pl.DataFrame({"lon": [lon], "lat": [lat]})
+    polars_actual = lb_to_radec_polars(AngleExpr(pl.col("lon"), "rad"), AngleExpr(pl.col("lat"), "rad"))
+    data = data.with_columns(polars_actual[0].to_radians().alias("ra"), polars_actual[1].to_radians().alias("dec"))
+
+    lon_array = AngleArray(np.array([lon], dtype=np.float64), "rad")
+    lat_array = AngleArray(np.array([lat], dtype=np.float64), "rad")
+    ra, dec = lb_to_radec_numpy(lon_array, lat_array)
+    galpy_ra, galpy_dec = galcoords.lb_to_radec(lon_array.to_radians(), lat_array.to_radians(), degree=False, epoch=None).T
+
+    np.testing.assert_allclose(data["ra"].to_numpy(), ra.to_radians())
+    np.testing.assert_allclose(data["dec"].to_numpy(), dec.to_radians())
+    np.testing.assert_allclose(ra.to_radians(), galpy_ra)
+    np.testing.assert_allclose(dec.to_radians(), galpy_dec)
 @given(
     pmra=st.floats(min_value=-1e9, max_value=1e9),
     pmdec=st.floats(min_value=-1e9, max_value=1e9),
@@ -87,6 +109,41 @@ def test_pmrapmdec_to_pmllpmbb(pmra: float, pmdec: float, ra: float, dec: float)
     np.testing.assert_allclose(data["pmbb"].to_numpy(), gl_pmbb)
     np.testing.assert_allclose(fl_pmll, gl_pmll)
     np.testing.assert_allclose(fl_pmbb, gl_pmbb)
+
+
+@settings(max_examples=25, deadline=None)
+@given(
+    pmll=st.floats(min_value=-1e9, max_value=1e9),
+    pmbb=st.floats(min_value=-1e9, max_value=1e9),
+    lon=st.floats(min_value=0, max_value=2 * np.pi),
+    lat=st.floats(min_value=-np.pi / 2 + 1e-8, max_value=np.pi / 2 - 1e-8),
+)
+def test_pmllpmbb_to_pmrapmdec(pmll: float, pmbb: float, lon: float, lat: float) -> None:
+    data = pl.DataFrame({"pmll": [pmll], "pmbb": [pmbb], "lon": [lon], "lat": [lat]})
+    polars_actual = pmllpmbb_to_pmrapmdec_polars(
+        pl.col("pmll"), pl.col("pmbb"), lon=AngleExpr(pl.col("lon"), "rad"), lat=AngleExpr(pl.col("lat"), "rad")
+    )
+    data = data.select(polars_actual[0].alias("pmracosdec"), polars_actual[1].alias("pmdec"))
+
+    pmll_array = np.array([pmll], dtype=np.float64)
+    pmbb_array = np.array([pmbb], dtype=np.float64)
+    lon_array = AngleArray(np.array([lon], dtype=np.float64), "rad")
+    lat_array = AngleArray(np.array([lat], dtype=np.float64), "rad")
+    pmracosdec, pmdec = pmllpmbb_to_pmrapmdec_numpy(pmll_array, pmbb_array, lon=lon_array, lat=lat_array)
+    ra, dec = lb_to_radec_numpy(lon_array, lat_array)
+    round_trip_pmll, round_trip_pmbb = pmrapmdec_to_pmllpmbb_numpy(
+        pmracosdec, pmdec, ra=ra, dec=dec
+    )
+    galpy_pmracosdec, galpy_pmdec = galcoords.pmllpmbb_to_pmrapmdec(
+        pmll_array, pmbb_array, lon_array.to_radians(), lat_array.to_radians(), degree=False, epoch=None
+    ).T
+
+    np.testing.assert_allclose(data["pmracosdec"].to_numpy(), pmracosdec)
+    np.testing.assert_allclose(data["pmdec"].to_numpy(), pmdec)
+    np.testing.assert_allclose(pmracosdec, galpy_pmracosdec)
+    np.testing.assert_allclose(pmdec, galpy_pmdec)
+    np.testing.assert_allclose(round_trip_pmll, pmll_array, atol=1e-6)
+    np.testing.assert_allclose(round_trip_pmbb, pmbb_array, atol=1e-6)
 
 
 @given(

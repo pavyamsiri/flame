@@ -14,7 +14,9 @@ from .galactic import vrpmllpmbb_to_vxvyvz
 
 __all__: list[str] = [
     "radec_to_lb",
+    "lb_to_radec",
     "pmrapmdec_to_pmllpmbb",
+    "pmllpmbb_to_pmrapmdec",
     "icrs_to_galactic_cartesian",
     "icrs_to_galactic_velocity",
 ]
@@ -132,7 +134,60 @@ def radec_to_lb(ra: AngleExpr, dec: AngleExpr) -> tuple[AngleExpr, AngleExpr]:
     lat = gl_z.arcsin()
     lon = pl.arctan2(gl_y / lat.cos(), gl_x / lat.cos())
     lon = pl.when(lon < 0.0).then(lon + 2 * np.pi).otherwise(lon)
+    lon %= 2 * np.pi
     return (AngleExpr(lon, "rad"), AngleExpr(lat, "rad"))
+
+
+def lb_to_radec(lon: AngleExpr, lat: AngleExpr) -> tuple[AngleExpr, AngleExpr]:
+    """Transform Galactic coordinates to equatorial ICRS coordinates.
+
+    Parameters
+    ----------
+    lon : AngleExpr
+        The Galactic longitude.
+    lat : AngleExpr
+        The Galactic latitude.
+
+    Returns
+    -------
+    ra : AngleExpr
+        The right ascension in the range `[0, 2pi)`.
+    dec : AngleExpr
+        The declination.
+
+    """
+    lon_radians = lon.to_radians()
+    lat_radians = lat.to_radians()
+    coslat_coslon = lat_radians.cos() * lon_radians.cos()
+    coslat_sinlon = lat_radians.cos() * lon_radians.sin()
+    sinlat = lat_radians.sin()
+
+    icrs_x = cast(
+        pl.Expr,
+        TRANSFORMATION_MATRIX[0, 0] * coslat_coslon
+        + TRANSFORMATION_MATRIX[1, 0] * coslat_sinlon
+        + TRANSFORMATION_MATRIX[2, 0] * sinlat,
+    )
+    icrs_y = cast(
+        pl.Expr,
+        TRANSFORMATION_MATRIX[0, 1] * coslat_coslon
+        + TRANSFORMATION_MATRIX[1, 1] * coslat_sinlon
+        + TRANSFORMATION_MATRIX[2, 1] * sinlat,
+    )
+    icrs_z = cast(
+        pl.Expr,
+        TRANSFORMATION_MATRIX[0, 2] * coslat_coslon
+        + TRANSFORMATION_MATRIX[1, 2] * coslat_sinlon
+        + TRANSFORMATION_MATRIX[2, 2] * sinlat,
+    )
+
+    icrs_z = pl.when(icrs_z > +1.0).then(+1.0).otherwise(icrs_z)
+    icrs_z = pl.when(icrs_z < -1.0).then(-1.0).otherwise(icrs_z)
+    dec = icrs_z.arcsin()
+    ra = pl.arctan2(icrs_y / dec.cos(), icrs_x / dec.cos())
+    ra = pl.when(ra < 0.0).then(ra + 2 * np.pi).otherwise(ra)
+    ra %= 2 * np.pi
+    return (AngleExpr(ra, "rad"), AngleExpr(dec, "rad"))
 
 
 def pmrapmdec_to_pmllpmbb(pmracosdec: pl.Expr, pmdec: pl.Expr, *, ra: AngleExpr, dec: AngleExpr) -> tuple[pl.Expr, pl.Expr]:
@@ -176,3 +231,48 @@ def pmrapmdec_to_pmllpmbb(pmracosdec: pl.Expr, pmdec: pl.Expr, *, ra: AngleExpr,
     pmll = cosphi * pmracosdec + sinphi * pmdec
     pmbb = -sinphi * pmracosdec + cosphi * pmdec
     return (pmll, pmbb)
+
+
+def pmllpmbb_to_pmrapmdec(
+    pmll: pl.Expr, pmbb: pl.Expr, *, lon: AngleExpr, lat: AngleExpr
+) -> tuple[pl.Expr, pl.Expr]:
+    """Transform Galactic proper motions to equatorial ICRS proper motions.
+
+    Parameters
+    ----------
+    pmll : pl.Expr
+        The proper motion in longitude corrected by cos(b) in mas/yr.
+    pmbb : pl.Expr
+        The proper motion in latitude in mas/yr.
+    lon : AngleExpr
+        The Galactic longitude in radians.
+    lat : AngleExpr
+        The Galactic latitude in radians.
+
+    Returns
+    -------
+    pmracosdec : pl.Expr
+        The proper motion in right ascension corrected by cos(dec) in mas/yr.
+    pmdec : pl.Expr
+        The proper motion in declination in mas/yr.
+
+    """
+    ra, dec = lb_to_radec(lon, lat)
+    ra_radians = ra.to_radians()
+    dec_radians = dec.to_radians()
+    treated_dec = pl.when(dec_radians == DEC_NGP).then(dec_radians + 1e-16).otherwise(dec_radians)
+    sindec_ngp: float = np.sin(DEC_NGP)
+    cosdec_ngp: float = np.cos(DEC_NGP)
+    sindec = treated_dec.sin()
+    cosdec = treated_dec.cos()
+    sinrarangp = (ra_radians - RA_NGP).sin()
+    cosrarangp = (ra_radians - RA_NGP).cos()
+    cosphi = sindec_ngp * cosdec - cosdec_ngp * sindec * cosrarangp
+    sinphi = sinrarangp * cosdec_ngp
+    norm = (cosphi**2.0 + sinphi**2.0).sqrt()
+    cosphi /= norm
+    sinphi /= norm
+
+    pmracosdec = cosphi * pmll - sinphi * pmbb
+    pmdec = sinphi * pmll + cosphi * pmbb
+    return (pmracosdec, pmdec)

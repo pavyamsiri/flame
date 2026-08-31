@@ -14,7 +14,9 @@ from .galactic import vrpmllpmbb_to_vxvyvz
 
 __all__: list[str] = [
     "radec_to_lb",
+    "lb_to_radec",
     "pmrapmdec_to_pmllpmbb",
+    "pmllpmbb_to_pmrapmdec",
     "icrs_to_galactic_cartesian",
     "icrs_to_galactic_velocity",
 ]
@@ -129,7 +131,49 @@ def radec_to_lb[F: np.float64, S: tuple[Any, ...]](
     lat = np.arcsin(gl_xyz[2])
     lon = np.arctan2(gl_xyz[1] / np.cos(lat), gl_xyz[0] / np.cos(lat))
     lon[lon < 0.0] += 2 * np.pi
+    lon = np.mod(lon, 2 * np.pi)
     return (AngleArray(lon, "rad"), AngleArray(lat, "rad"))
+
+
+def lb_to_radec[F: np.float64, S: tuple[Any, ...]](
+    lon: AngleArray[F, S], lat: AngleArray[F, S]
+) -> tuple[AngleArray[np.float64, S], AngleArray[np.float64, S]]:
+    """Transform Galactic coordinates to equatorial ICRS coordinates.
+
+    Parameters
+    ----------
+    lon : AngleArray[float]
+        The Galactic longitude.
+    lat : AngleArray[float]
+        The Galactic latitude.
+
+    Returns
+    -------
+    ra : AngleArray[f64]
+        The right ascension in the range `[0, 2pi)`.
+    dec : AngleArray[f64]
+        The declination.
+
+    """
+    lon_radians = lon.to_radians()
+    lat_radians = lat.to_radians()
+    xyz: onp.Array2D[np.float64] = np.array(
+        [
+            np.cos(lat_radians) * np.cos(lon_radians),
+            np.cos(lat_radians) * np.sin(lon_radians),
+            np.sin(lat_radians),
+        ],
+        dtype=np.float64,
+    )
+    icrs_xyz = np.dot(TRANSFORMATION_MATRIX.T, xyz)
+    icrs_xyz[2][icrs_xyz[2] > +1.0] = +1.0
+    icrs_xyz[2][icrs_xyz[2] < -1.0] = -1.0
+
+    dec = np.arcsin(icrs_xyz[2])
+    ra = np.arctan2(icrs_xyz[1] / np.cos(dec), icrs_xyz[0] / np.cos(dec))
+    ra[ra < 0.0] += 2 * np.pi
+    ra = np.mod(ra, 2 * np.pi)
+    return (AngleArray(ra, "rad"), AngleArray(dec, "rad"))
 
 
 def pmrapmdec_to_pmllpmbb[F: np.float64, S: tuple[Any, ...]](
@@ -180,3 +224,54 @@ def pmrapmdec_to_pmllpmbb[F: np.float64, S: tuple[Any, ...]](
     )
 
     return (pmll, pmbb)
+
+
+def pmllpmbb_to_pmrapmdec[F: np.float64, S: tuple[Any, ...]](
+    pmll: onp.ArrayND[F, S], pmbb: onp.ArrayND[F, S], *, lon: AngleArray[F, S], lat: AngleArray[F, S]
+) -> tuple[onp.ArrayND[np.float64, S], onp.ArrayND[np.float64, S]]:
+    """Transform Galactic proper motions to equatorial ICRS proper motions.
+
+    Parameters
+    ----------
+    pmll : Array[float]
+        The proper motion in longitude corrected by cos(b) in mas/yr.
+    pmbb : Array[float]
+        The proper motion in latitude in mas/yr.
+    lon : AngleArray[float]
+        The Galactic longitude in radians.
+    lat : AngleArray[float]
+        The Galactic latitude in radians.
+
+    Returns
+    -------
+    pmracosdec : Array[f64]
+        The proper motion in right ascension corrected by cos(dec) in mas/yr.
+    pmdec : Array[f64]
+        The proper motion in declination in mas/yr.
+
+    """
+    ra, dec = lb_to_radec(lon, lat)
+    ra_radians = ra.to_radians()
+    dec_radians = dec.to_radians()
+
+    treated_dec = np.copy(dec_radians).astype(np.float64)
+    treated_dec[treated_dec == DEC_NGP] += 1e-16
+    sindec_ngp: float = np.sin(DEC_NGP)
+    cosdec_ngp: float = np.cos(DEC_NGP)
+    sindec = np.sin(treated_dec)
+    cosdec = np.cos(treated_dec)
+    sinrarangp = np.sin(ra_radians - RA_NGP)
+    cosrarangp = np.cos(ra_radians - RA_NGP)
+    cosphi = sindec_ngp * cosdec - cosdec_ngp * sindec * cosrarangp
+    sinphi = sinrarangp * cosdec_ngp
+    norm = np.sqrt(cosphi**2.0 + sinphi**2.0)
+    cosphi /= norm
+    sinphi /= norm
+
+    pmracosdec: onp.ArrayND[np.float64, S] = cast(
+        onp.ArrayND[np.float64, S], (cosphi * pmll - sinphi * pmbb).astype(np.float64)
+    )
+    pmdec: onp.ArrayND[np.float64, S] = cast(
+        onp.ArrayND[np.float64, S], (sinphi * pmll + cosphi * pmbb).astype(np.float64)
+    )
+    return (pmracosdec, pmdec)
