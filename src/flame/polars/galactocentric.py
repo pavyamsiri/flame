@@ -5,20 +5,21 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-import polars as pl
-
-from flame.units import AngleExpr
-
 from .icrs import icrs_to_galactic_cartesian, icrs_to_galactic_velocity
 
 if TYPE_CHECKING:
+    import polars as pl
+
     from flame._galactocentric import AffineTransforms
+    from flame.units import AngleExpr
 
 __all__: list[str] = ["PolarsGalactocentricAdapter"]
 
 
 @dataclass(frozen=True, slots=True)
 class PolarsGalactocentricAdapter:
+    """Polars-expression adapter for a preconfigured Galactocentric frame."""
+
     _transforms: AffineTransforms
 
     def position_from_galactic(self, u: pl.Expr, v: pl.Expr, w: pl.Expr) -> tuple[pl.Expr, pl.Expr, pl.Expr]:

@@ -14,8 +14,7 @@ from flame.galactocentric import GalactocentricFrame, default_galactocentric_fra
 from flame.numpy.icrs import icrs_to_galactic_cartesian as icrs_to_galactic_cartesian_numpy
 from flame.numpy.icrs import icrs_to_galactic_velocity as icrs_to_galactic_velocity_numpy
 from flame.polars.geometric import spherical_to_cartesian as spherical_to_cartesian_polars
-from flame.units import AngleExpr
-from flame.units import AngleArray
+from flame.units import AngleArray, AngleExpr
 
 if TYPE_CHECKING:
     from typing import Literal

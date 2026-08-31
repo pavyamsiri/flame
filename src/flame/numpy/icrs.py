@@ -2,23 +2,26 @@
 
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
-from optype import numpy as onp
 
 from flame._icrs import DEC_NGP, RA_NGP, TRANSFORMATION_MATRIX
 from flame.units import AngleArray
-from .geometric import spherical_to_cartesian
+
 from .galactic import vrpmllpmbb_to_vxvyvz
+from .geometric import spherical_to_cartesian
+
+if TYPE_CHECKING:
+    from optype import numpy as onp
 
 __all__: list[str] = [
-    "radec_to_lb",
-    "lb_to_radec",
-    "pmrapmdec_to_pmllpmbb",
-    "pmllpmbb_to_pmrapmdec",
     "icrs_to_galactic_cartesian",
     "icrs_to_galactic_velocity",
+    "lb_to_radec",
+    "pmllpmbb_to_pmrapmdec",
+    "pmrapmdec_to_pmllpmbb",
+    "radec_to_lb",
 ]
 
 
@@ -87,7 +90,6 @@ def icrs_to_galactic_velocity[F: np.float64, S: tuple[Any, ...]](
         The Galactic Cartesian z velocity.
 
     """
-
     lon, lat = radec_to_lb(ra, dec)
     pmll, pmbb = pmrapmdec_to_pmllpmbb(pmracosdec, pmdec, ra=ra, dec=dec)
     return vrpmllpmbb_to_vxvyvz(vr, pmll, pmbb, lon, lat, distance)
@@ -218,9 +220,9 @@ def pmrapmdec_to_pmllpmbb[F: np.float64, S: tuple[Any, ...]](
     cosphi /= norm
     sinphi /= norm
 
-    pmll: onp.ArrayND[np.float64, S] = cast(onp.ArrayND[np.float64, S], (cosphi * pmracosdec + sinphi * pmdec).astype(np.float64))
+    pmll: onp.ArrayND[np.float64, S] = cast("onp.ArrayND[np.float64, S]", (cosphi * pmracosdec + sinphi * pmdec).astype(np.float64))
     pmbb: onp.ArrayND[np.float64, S] = cast(
-        onp.ArrayND[np.float64, S], (-sinphi * pmracosdec + cosphi * pmdec).astype(np.float64)
+        "onp.ArrayND[np.float64, S]", (-sinphi * pmracosdec + cosphi * pmdec).astype(np.float64)
     )
 
     return (pmll, pmbb)
@@ -269,9 +271,9 @@ def pmllpmbb_to_pmrapmdec[F: np.float64, S: tuple[Any, ...]](
     sinphi /= norm
 
     pmracosdec: onp.ArrayND[np.float64, S] = cast(
-        onp.ArrayND[np.float64, S], (cosphi * pmll - sinphi * pmbb).astype(np.float64)
+        "onp.ArrayND[np.float64, S]", (cosphi * pmll - sinphi * pmbb).astype(np.float64)
     )
     pmdec: onp.ArrayND[np.float64, S] = cast(
-        onp.ArrayND[np.float64, S], (sinphi * pmll + cosphi * pmbb).astype(np.float64)
+        "onp.ArrayND[np.float64, S]", (sinphi * pmll + cosphi * pmbb).astype(np.float64)
     )
     return (pmracosdec, pmdec)

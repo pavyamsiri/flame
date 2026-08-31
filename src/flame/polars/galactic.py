@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
-import polars as pl
+from typing import TYPE_CHECKING
 
-from flame.units import AngleExpr
 from flame._galactic import MAS_PER_YR_TO_KM_PER_S_PER_KPC
 
 from .geometric import cartesian_velocity_to_spherical, spherical_velocity_to_cartesian
+
+if TYPE_CHECKING:
+    import polars as pl
+
+    from flame.units import AngleExpr
 
 __all__: list[str] = ["vrpmllpmbb_to_vxvyvz", "vxvyvz_to_vrpmllpmbb"]
 

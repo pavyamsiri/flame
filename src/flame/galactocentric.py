@@ -25,7 +25,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Final
 
 import numpy as np
-from optype import numpy as onp
+
 from flame._galactocentric import AffineTransforms
 from flame.numpy.galactocentric import NumpyGalactocentricAdapter
 from flame.polars.galactocentric import PolarsGalactocentricAdapter
@@ -36,6 +36,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
     from typing import Literal
 
+    from optype import numpy as onp
 
 DEFAULT_SUN_X: Final[float] = -8.122
 DEFAULT_SUN_Y: Final[float] = 0
@@ -79,13 +80,13 @@ class GalactocentricFrame:
     """Definition of the Galactocentric frame."""
 
     __slots__: Sequence[str] = (
-        "_sun_x",
-        "_sun_y",
-        "_sun_z",
+        "_handedness",
         "_sun_vx",
         "_sun_vy",
         "_sun_vz",
-        "_handedness",
+        "_sun_x",
+        "_sun_y",
+        "_sun_z",
         "_transforms",
         "numpy",
         "polars",
@@ -191,6 +192,7 @@ class GalactocentricFrame:
         )
 
     def __repr__(self) -> str:
+        """Return a reconstructible representation of the frame parameters."""
         class_name = self.__class__.__name__
         return (
             f"{class_name}(sun_x={self._sun_x}, sun_y={self._sun_y}, sun_z={self._sun_z}, "
@@ -213,27 +215,35 @@ class GalactocentricFrame:
         return (self._sun_vx, self._sun_vy, self._sun_vz)
 
     def sun_x(self) -> float:
+        """Return the Solar Galactocentric x coordinate in kpc."""
         return self._sun_x
 
     def sun_y(self) -> float:
+        """Return the Solar Galactocentric y coordinate in kpc."""
         return self._sun_y
 
     def sun_z(self) -> float:
+        """Return the Solar Galactocentric z coordinate in kpc."""
         return self._sun_z
 
     def sun_vx(self) -> float:
+        """Return the Solar Galactocentric x velocity in km/s."""
         return self._sun_vx
 
     def sun_vy(self) -> float:
+        """Return the Solar Galactocentric y velocity in km/s."""
         return self._sun_vy
 
     def sun_vz(self) -> float:
+        """Return the Solar Galactocentric z velocity in km/s."""
         return self._sun_vz
 
     def distance_to_gc(self) -> float:
+        """Return the three-dimensional Solar distance from the Galactic centre in kpc."""
         return np.sqrt(self._sun_x**2 + self._sun_y**2 + self._sun_z**2)
 
     def sun_rxy(self) -> float:
+        """Return the Solar cylindrical distance from the Galactic centre in kpc."""
         return np.sqrt(self._sun_x**2 + self._sun_y**2)
 
 

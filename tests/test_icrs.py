@@ -6,20 +6,20 @@ from galpy.util import coords as galcoords  # pyright: ignore[reportMissingTypeS
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from flame.numpy.icrs import pmrapmdec_to_pmllpmbb as pmrapmdec_to_pmllpmbb_numpy
-from flame.numpy.icrs import pmllpmbb_to_pmrapmdec as pmllpmbb_to_pmrapmdec_numpy
-from flame.numpy.icrs import radec_to_lb as radec_to_lb_numpy
-from flame.numpy.icrs import lb_to_radec as lb_to_radec_numpy
-from flame.numpy.icrs import icrs_to_galactic_cartesian as icrs_to_galactic_cartesian_numpy
-from flame.numpy.icrs import icrs_to_galactic_velocity as icrs_to_galactic_velocity_numpy
-from flame.polars.icrs import pmrapmdec_to_pmllpmbb as pmrapmdec_to_pmllpmbb_polars
-from flame.polars.icrs import pmllpmbb_to_pmrapmdec as pmllpmbb_to_pmrapmdec_polars
-from flame.polars.icrs import radec_to_lb as radec_to_lb_polars
-from flame.polars.icrs import lb_to_radec as lb_to_radec_polars
-from flame.polars.icrs import icrs_to_galactic_cartesian as icrs_to_galactic_cartesian_polars
-from flame.polars.icrs import icrs_to_galactic_velocity as icrs_to_galactic_velocity_polars
 from flame.numpy.galactic import vrpmllpmbb_to_vxvyvz as vrpmllpmbb_to_vxvyvz_numpy
 from flame.numpy.geometric import spherical_to_cartesian as spherical_to_cartesian_numpy
+from flame.numpy.icrs import icrs_to_galactic_cartesian as icrs_to_galactic_cartesian_numpy
+from flame.numpy.icrs import icrs_to_galactic_velocity as icrs_to_galactic_velocity_numpy
+from flame.numpy.icrs import lb_to_radec as lb_to_radec_numpy
+from flame.numpy.icrs import pmllpmbb_to_pmrapmdec as pmllpmbb_to_pmrapmdec_numpy
+from flame.numpy.icrs import pmrapmdec_to_pmllpmbb as pmrapmdec_to_pmllpmbb_numpy
+from flame.numpy.icrs import radec_to_lb as radec_to_lb_numpy
+from flame.polars.icrs import icrs_to_galactic_cartesian as icrs_to_galactic_cartesian_polars
+from flame.polars.icrs import icrs_to_galactic_velocity as icrs_to_galactic_velocity_polars
+from flame.polars.icrs import lb_to_radec as lb_to_radec_polars
+from flame.polars.icrs import pmllpmbb_to_pmrapmdec as pmllpmbb_to_pmrapmdec_polars
+from flame.polars.icrs import pmrapmdec_to_pmllpmbb as pmrapmdec_to_pmllpmbb_polars
+from flame.polars.icrs import radec_to_lb as radec_to_lb_polars
 from flame.units import AngleArray, AngleExpr
 
 

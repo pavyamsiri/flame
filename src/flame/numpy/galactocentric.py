@@ -2,24 +2,26 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
 from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
-from flame.units import AngleArray
 from .icrs import icrs_to_galactic_cartesian, icrs_to_galactic_velocity
 
 if TYPE_CHECKING:
     from optype import numpy as onp
 
     from flame._galactocentric import AffineTransforms
+    from flame.units import AngleArray
 
 __all__: list[str] = ["NumpyGalactocentricAdapter"]
 
 
 @dataclass(frozen=True, slots=True)
 class NumpyGalactocentricAdapter:
+    """NumPy-array adapter for a preconfigured Galactocentric frame."""
+
     _transforms: AffineTransforms
 
     def position_from_galactic[F: np.float64, S: tuple[Any, ...]](

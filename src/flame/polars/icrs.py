@@ -9,16 +9,17 @@ import polars as pl
 
 from flame._icrs import DEC_NGP, RA_NGP, TRANSFORMATION_MATRIX
 from flame.units import AngleExpr
-from .geometric import spherical_to_cartesian
+
 from .galactic import vrpmllpmbb_to_vxvyvz
+from .geometric import spherical_to_cartesian
 
 __all__: list[str] = [
-    "radec_to_lb",
-    "lb_to_radec",
-    "pmrapmdec_to_pmllpmbb",
-    "pmllpmbb_to_pmrapmdec",
     "icrs_to_galactic_cartesian",
     "icrs_to_galactic_velocity",
+    "lb_to_radec",
+    "pmllpmbb_to_pmrapmdec",
+    "pmrapmdec_to_pmllpmbb",
+    "radec_to_lb",
 ]
 
 
@@ -79,7 +80,6 @@ def icrs_to_galactic_velocity(
         The Galactic Cartesian z velocity.
 
     """
-
     lon, lat = radec_to_lb(ra, dec)
     pmll, pmbb = pmrapmdec_to_pmllpmbb(pmracosdec, pmdec, ra=ra, dec=dec)
     return vrpmllpmbb_to_vxvyvz(vr, pmll, pmbb, lon, lat, distance)
@@ -110,19 +110,19 @@ def radec_to_lb(ra: AngleExpr, dec: AngleExpr) -> tuple[AngleExpr, AngleExpr]:
     sindec = dec_radians.sin()
 
     gl_x = cast(
-        pl.Expr,
+        "pl.Expr",
         TRANSFORMATION_MATRIX[0, 0] * cosdec_cosra
         + TRANSFORMATION_MATRIX[0, 1] * cosdec_sinra
         + TRANSFORMATION_MATRIX[0, 2] * sindec,
     )
     gl_y = cast(
-        pl.Expr,
+        "pl.Expr",
         TRANSFORMATION_MATRIX[1, 0] * cosdec_cosra
         + TRANSFORMATION_MATRIX[1, 1] * cosdec_sinra
         + TRANSFORMATION_MATRIX[1, 2] * sindec,
     )
     gl_z = cast(
-        pl.Expr,
+        "pl.Expr",
         TRANSFORMATION_MATRIX[2, 0] * cosdec_cosra
         + TRANSFORMATION_MATRIX[2, 1] * cosdec_sinra
         + TRANSFORMATION_MATRIX[2, 2] * sindec,
@@ -163,19 +163,19 @@ def lb_to_radec(lon: AngleExpr, lat: AngleExpr) -> tuple[AngleExpr, AngleExpr]:
     sinlat = lat_radians.sin()
 
     icrs_x = cast(
-        pl.Expr,
+        "pl.Expr",
         TRANSFORMATION_MATRIX[0, 0] * coslat_coslon
         + TRANSFORMATION_MATRIX[1, 0] * coslat_sinlon
         + TRANSFORMATION_MATRIX[2, 0] * sinlat,
     )
     icrs_y = cast(
-        pl.Expr,
+        "pl.Expr",
         TRANSFORMATION_MATRIX[0, 1] * coslat_coslon
         + TRANSFORMATION_MATRIX[1, 1] * coslat_sinlon
         + TRANSFORMATION_MATRIX[2, 1] * sinlat,
     )
     icrs_z = cast(
-        pl.Expr,
+        "pl.Expr",
         TRANSFORMATION_MATRIX[0, 2] * coslat_coslon
         + TRANSFORMATION_MATRIX[1, 2] * coslat_sinlon
         + TRANSFORMATION_MATRIX[2, 2] * sinlat,

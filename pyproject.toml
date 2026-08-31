@@ -38,6 +38,15 @@ reportArgumentType = false
 [tool.ruff]
 line-length = 130
 
+[tool.ruff.lint]
+extend-select = ["D", "I", "RUF", "TC"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["D"]
+
 [dependency-groups]
 dev = [
     "galpy>=1.11.1",

@@ -8,16 +8,16 @@ import polars as pl
 from flame.units import AngleExpr
 
 __all__: list[str] = [
-    "spherical_to_cartesian",
-    "cartesian_to_spherical",
-    "spherical_velocity_to_cartesian",
-    "cartesian_velocity_to_spherical",
-    "cartesian_to_polar",
-    "cartesian_vec_to_polar_vec",
     "cartesian_to_cylindrical",
-    "cylindrical_to_cartesian",
+    "cartesian_to_polar",
+    "cartesian_to_spherical",
+    "cartesian_vec_to_polar_vec",
     "cartesian_velocity_to_cylindrical",
+    "cartesian_velocity_to_spherical",
+    "cylindrical_to_cartesian",
     "cylindrical_velocity_to_cartesian",
+    "spherical_to_cartesian",
+    "spherical_velocity_to_cartesian",
 ]
 
 

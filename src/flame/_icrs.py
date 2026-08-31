@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+
 import numpy as np
 
 if TYPE_CHECKING:
     from typing import Final
+
     from optype import numpy as onp
 
 __all__: list[str] = [

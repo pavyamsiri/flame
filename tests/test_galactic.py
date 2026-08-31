@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import numpy as np
 import polars as pl
+from galpy.util import coords as galcoords  # pyright: ignore[reportMissingTypeStubs]
 from hypothesis import given
 from hypothesis import strategies as st
-from galpy.util import coords as galcoords  # pyright: ignore[reportMissingTypeStubs]
 
 from flame.numpy.galactic import vrpmllpmbb_to_vxvyvz as vrpmllpmbb_to_vxvyvz_numpy
 from flame.numpy.galactic import vxvyvz_to_vrpmllpmbb as vxvyvz_to_vrpmllpmbb_numpy

@@ -8,24 +8,24 @@ from galpy.util import coords as galcoords  # pyright: ignore[reportMissingTypeS
 from hypothesis import given
 from hypothesis import strategies as st
 
+from flame.numpy.geometric import cartesian_to_cylindrical as cartesian_to_cylindrical_numpy
 from flame.numpy.geometric import cartesian_to_polar as cartesian_to_polar_numpy
-from flame.numpy.geometric import cartesian_vec_to_polar_vec as cartesian_vec_to_polar_vec_numpy
 from flame.numpy.geometric import cartesian_to_spherical as cartesian_to_spherical_numpy
+from flame.numpy.geometric import cartesian_vec_to_polar_vec as cartesian_vec_to_polar_vec_numpy
+from flame.numpy.geometric import cartesian_velocity_to_cylindrical as cartesian_velocity_to_cylindrical_numpy
 from flame.numpy.geometric import cartesian_velocity_to_spherical as cartesian_velocity_to_spherical_numpy
 from flame.numpy.geometric import cylindrical_to_cartesian as cylindrical_to_cartesian_numpy
 from flame.numpy.geometric import cylindrical_velocity_to_cartesian as cylindrical_velocity_to_cartesian_numpy
-from flame.numpy.geometric import cartesian_to_cylindrical as cartesian_to_cylindrical_numpy
-from flame.numpy.geometric import cartesian_velocity_to_cylindrical as cartesian_velocity_to_cylindrical_numpy
 from flame.numpy.geometric import spherical_to_cartesian as spherical_to_cartesian_numpy
 from flame.numpy.geometric import spherical_velocity_to_cartesian as spherical_velocity_to_cartesian_numpy
+from flame.polars.geometric import cartesian_to_cylindrical as cartesian_to_cylindrical_polars
 from flame.polars.geometric import cartesian_to_polar as cartesian_to_polar_polars
-from flame.polars.geometric import cartesian_vec_to_polar_vec as cartesian_vec_to_polar_vec_polars
 from flame.polars.geometric import cartesian_to_spherical as cartesian_to_spherical_polars
+from flame.polars.geometric import cartesian_vec_to_polar_vec as cartesian_vec_to_polar_vec_polars
+from flame.polars.geometric import cartesian_velocity_to_cylindrical as cartesian_velocity_to_cylindrical_polars
 from flame.polars.geometric import cartesian_velocity_to_spherical as cartesian_velocity_to_spherical_polars
 from flame.polars.geometric import cylindrical_to_cartesian as cylindrical_to_cartesian_polars
 from flame.polars.geometric import cylindrical_velocity_to_cartesian as cylindrical_velocity_to_cartesian_polars
-from flame.polars.geometric import cartesian_to_cylindrical as cartesian_to_cylindrical_polars
-from flame.polars.geometric import cartesian_velocity_to_cylindrical as cartesian_velocity_to_cylindrical_polars
 from flame.polars.geometric import spherical_velocity_to_cartesian as spherical_velocity_to_cartesian_polars
 from flame.units import AngleArray, AngleExpr
 

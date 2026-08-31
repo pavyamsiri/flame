@@ -2,15 +2,18 @@
 
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
-from optype import numpy as onp
 
-from flame.units import AngleArray
 from flame._galactic import MAS_PER_YR_TO_KM_PER_S_PER_KPC
 
 from .geometric import cartesian_velocity_to_spherical, spherical_velocity_to_cartesian
+
+if TYPE_CHECKING:
+    from optype import numpy as onp
+
+    from flame.units import AngleArray
 
 __all__: list[str] = ["vrpmllpmbb_to_vxvyvz", "vxvyvz_to_vrpmllpmbb"]
 
@@ -54,8 +57,8 @@ def vrpmllpmbb_to_vxvyvz[F: np.float64, S: tuple[Any, ...]](
         The velocity in the Galactic z direction in km/s.
 
     """
-    longitude_velocity = cast(onp.ArrayND[np.float64, S], distance * pmll * MAS_PER_YR_TO_KM_PER_S_PER_KPC)
-    latitude_velocity = cast(onp.ArrayND[np.float64, S], distance * pmbb * MAS_PER_YR_TO_KM_PER_S_PER_KPC)
+    longitude_velocity = cast("onp.ArrayND[np.float64, S]", distance * pmll * MAS_PER_YR_TO_KM_PER_S_PER_KPC)
+    latitude_velocity = cast("onp.ArrayND[np.float64, S]", distance * pmbb * MAS_PER_YR_TO_KM_PER_S_PER_KPC)
     return spherical_velocity_to_cartesian(vr, longitude_velocity, latitude_velocity, lon, lat)
 
 
@@ -75,6 +78,6 @@ def vxvyvz_to_vrpmllpmbb[F: np.float64, S: tuple[Any, ...]](
     vr, longitude_velocity, latitude_velocity = cartesian_velocity_to_spherical(vx, vy, vz, lon, lat)
     scale = distance * MAS_PER_YR_TO_KM_PER_S_PER_KPC
     with np.errstate(divide="ignore", invalid="ignore"):
-        pmll = cast(onp.ArrayND[np.float64, S], (longitude_velocity / scale).astype(np.float64))
-        pmbb = cast(onp.ArrayND[np.float64, S], (latitude_velocity / scale).astype(np.float64))
+        pmll = cast("onp.ArrayND[np.float64, S]", (longitude_velocity / scale).astype(np.float64))
+        pmbb = cast("onp.ArrayND[np.float64, S]", (latitude_velocity / scale).astype(np.float64))
     return (vr, pmll, pmbb)
