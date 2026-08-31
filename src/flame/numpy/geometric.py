@@ -55,7 +55,7 @@ def spherical_to_cartesian[F: np.float64, S: tuple[Any, ...]](
 
 
 def spherical_velocity_to_cartesian[F: np.float64, S: tuple[Any, ...]](
-    radial_velocity: onp.ArrayND[F, S],
+    vr: onp.ArrayND[F, S],
     longitude_velocity: onp.ArrayND[F, S],
     latitude_velocity: onp.ArrayND[F, S],
     lon: AngleArray[F, S],
@@ -75,13 +75,13 @@ def spherical_velocity_to_cartesian[F: np.float64, S: tuple[Any, ...]](
 
     vx = cast(
         onp.ArrayND[np.float64, S],
-        radial_velocity * cosl * cosb - longitude_velocity * sinl - latitude_velocity * cosl * sinb,
+        vr * cosl * cosb - longitude_velocity * sinl - latitude_velocity * cosl * sinb,
     )
     vy = cast(
         onp.ArrayND[np.float64, S],
-        radial_velocity * sinl * cosb + longitude_velocity * cosl - latitude_velocity * sinl * sinb,
+        vr * sinl * cosb + longitude_velocity * cosl - latitude_velocity * sinl * sinb,
     )
-    vz = cast(onp.ArrayND[np.float64, S], radial_velocity * sinb + latitude_velocity * cosb)
+    vz = cast(onp.ArrayND[np.float64, S], vr * sinb + latitude_velocity * cosb)
     return (vx, vy, vz)
 
 

@@ -145,7 +145,14 @@ class PolarsGalactocentricAdapter:
         return (gl_x, gl_y, gl_z)
 
     def phase_space_from_icrs(
-        self, ra: AngleExpr, dec: AngleExpr, distance: pl.Expr, pmracosdec: pl.Expr, pmdec: pl.Expr, radial_velocity: pl.Expr
+        self,
+        vr: pl.Expr,
+        pmracosdec: pl.Expr,
+        pmdec: pl.Expr,
+        distance: pl.Expr,
+        *,
+        ra: AngleExpr,
+        dec: AngleExpr,
     ) -> tuple[
         pl.Expr,
         pl.Expr,
@@ -158,18 +165,18 @@ class PolarsGalactocentricAdapter:
 
         Parameters
         ----------
-        ra : AngleExpr
-            The right ascension.
-        dec : AngleExpr
-            The declination.
-        distance : pl.Expr
-            The distance.
+        vr : pl.Expr
+            The radial velocity in km/s.
         pmracosdec : pl.Expr
             The proper motion in right ascension corrected by cos(dec) in mas/yr.
         pmdec : pl.Expr
             The proper motion in declination in mas/yr.
-        radial_velocity : pl.Expr
-            The radial velocity in km/s.
+        distance : pl.Expr
+            The distance.
+        ra : AngleExpr
+            The right ascension.
+        dec : AngleExpr
+            The declination.
 
         Returns
         -------
@@ -188,7 +195,7 @@ class PolarsGalactocentricAdapter:
 
         """
         gl_x, gl_y, gl_z = icrs_to_galactic_cartesian(ra, dec, distance)
-        gl_vx, gl_vy, gl_vz = icrs_to_galactic_velocity(pmracosdec, pmdec, radial_velocity, ra=ra, dec=dec, distance=distance)
+        gl_vx, gl_vy, gl_vz = icrs_to_galactic_velocity(vr, pmracosdec, pmdec, distance, ra=ra, dec=dec)
 
         gc_x, gc_y, gc_z = self.position_from_galactic(gl_x, gl_y, gl_z)
         gc_vx, gc_vy, gc_vz = self.velocity_from_galactic(gl_vx, gl_vy, gl_vz)

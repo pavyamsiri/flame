@@ -51,7 +51,7 @@ def spherical_to_cartesian(lon: AngleExpr, lat: AngleExpr, distance: pl.Expr) ->
 
 
 def spherical_velocity_to_cartesian(
-    radial_velocity: pl.Expr,
+    vr: pl.Expr,
     longitude_velocity: pl.Expr,
     latitude_velocity: pl.Expr,
     lon: AngleExpr,
@@ -69,9 +69,9 @@ def spherical_velocity_to_cartesian(
     sinb = lat_radians.sin()
     cosb = lat_radians.cos()
 
-    vx = radial_velocity * cosl * cosb - longitude_velocity * sinl - latitude_velocity * cosl * sinb
-    vy = radial_velocity * sinl * cosb + longitude_velocity * cosl - latitude_velocity * sinl * sinb
-    vz = radial_velocity * sinb + latitude_velocity * cosb
+    vx = vr * cosl * cosb - longitude_velocity * sinl - latitude_velocity * cosl * sinb
+    vy = vr * sinl * cosb + longitude_velocity * cosl - latitude_velocity * sinl * sinb
+    vz = vr * sinb + latitude_velocity * cosb
     return (vx, vy, vz)
 
 

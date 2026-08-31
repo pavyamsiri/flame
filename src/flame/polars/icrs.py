@@ -48,24 +48,24 @@ def icrs_to_galactic_cartesian(ra: AngleExpr, dec: AngleExpr, distance: pl.Expr)
 
 
 def icrs_to_galactic_velocity(
-    pmracosdec: pl.Expr, pmdec: pl.Expr, radial_velocity: pl.Expr, *, ra: AngleExpr, dec: AngleExpr, distance: pl.Expr
+    vr: pl.Expr, pmracosdec: pl.Expr, pmdec: pl.Expr, distance: pl.Expr, *, ra: AngleExpr, dec: AngleExpr
 ) -> tuple[pl.Expr, pl.Expr, pl.Expr]:
     """Transform from equatorial ICRS coordinates and proper motions to Galactic Cartesian velocities.
 
     Parameters
     ----------
+    vr : pl.Expr
+        The radial velocity in km/s.
     pmracosdec : pl.Expr
         The proper motion in right ascension corrected by cos(dec) in mas/yr.
     pmdec : pl.Expr
         The proper motion in declination in mas/yr.
-    radial_velocity : pl.Expr
-        The radial velocity in km/s.
+    distance : pl.Expr
+        The distance.
     ra : AngleExpr
         The right ascension in radians.
     dec : AngleExpr
         The declination in radians.
-    distance : pl.Expr
-        The distance.
 
     Returns
     -------
@@ -80,7 +80,7 @@ def icrs_to_galactic_velocity(
 
     lon, lat = radec_to_lb(ra, dec)
     pmll, pmbb = pmrapmdec_to_pmllpmbb(pmracosdec, pmdec, ra=ra, dec=dec)
-    return vrpmllpmbb_to_vxvyvz(radial_velocity, pmll, pmbb, lon, lat, distance)
+    return vrpmllpmbb_to_vxvyvz(vr, pmll, pmbb, lon, lat, distance)
 
 
 def radec_to_lb(ra: AngleExpr, dec: AngleExpr) -> tuple[AngleExpr, AngleExpr]:

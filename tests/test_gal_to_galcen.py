@@ -115,10 +115,12 @@ def test_phase_space_from_icrs() -> None:
     ra_angle = AngleArray(ra, "rad")
     dec_angle = AngleArray(dec, "rad")
 
-    actual = frame.numpy.phase_space_from_icrs(ra_angle, dec_angle, distance, pmracosdec, pmdec, radial_velocity)
+    actual = frame.numpy.phase_space_from_icrs(
+        radial_velocity, pmracosdec, pmdec, distance, ra=ra_angle, dec=dec_angle
+    )
     gl_position = icrs_to_galactic_cartesian_numpy(ra_angle, dec_angle, distance)
     gl_velocity = icrs_to_galactic_velocity_numpy(
-        pmracosdec, pmdec, radial_velocity, ra=ra_angle, dec=dec_angle, distance=distance
+        radial_velocity, pmracosdec, pmdec, distance, ra=ra_angle, dec=dec_angle
     )
     expected = (*frame.numpy.position_from_galactic(*gl_position), *frame.numpy.velocity_from_galactic(*gl_velocity))
     np.testing.assert_allclose(actual, expected)
@@ -134,12 +136,12 @@ def test_phase_space_from_icrs() -> None:
         }
     )
     polars_actual = frame.polars.phase_space_from_icrs(
-        AngleExpr(pl.col("ra"), "rad"),
-        AngleExpr(pl.col("dec"), "rad"),
-        pl.col("distance"),
+        pl.col("radial_velocity"),
         pl.col("pmracosdec"),
         pl.col("pmdec"),
-        pl.col("radial_velocity"),
+        pl.col("distance"),
+        ra=AngleExpr(pl.col("ra"), "rad"),
+        dec=AngleExpr(pl.col("dec"), "rad"),
     )
     data = data.with_columns(*(expression.alias(name) for expression, name in zip(polars_actual, ("x", "y", "z", "vx", "vy", "vz"), strict=True)))
     np.testing.assert_allclose(data.select("x", "y", "z", "vx", "vy", "vz").to_numpy().T, actual)

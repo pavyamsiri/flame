@@ -134,12 +134,12 @@ def test_icrs_to_galactic_velocity(
         }
     )
     polars_actual = icrs_to_galactic_velocity_polars(
+        pl.col("radial_velocity"),
         pl.col("pmra"),
         pl.col("pmdec"),
-        pl.col("radial_velocity"),
+        pl.col("distance"),
         ra=AngleExpr(pl.col("ra"), "rad"),
         dec=AngleExpr(pl.col("dec"), "rad"),
-        distance=pl.col("distance"),
     )
     data = data.with_columns(*(expression.alias(name) for expression, name in zip(polars_actual, ("vx", "vy", "vz"), strict=True)))
 
@@ -150,12 +150,12 @@ def test_icrs_to_galactic_velocity(
     dec_array = AngleArray(np.array([dec], dtype=np.float64), "rad")
     distance_array = np.array([distance], dtype=np.float64)
     actual = icrs_to_galactic_velocity_numpy(
+        radial_velocity_array,
         pmra_array,
         pmdec_array,
-        radial_velocity_array,
+        distance_array,
         ra=ra_array,
         dec=dec_array,
-        distance=distance_array,
     )
     lon, lat = radec_to_lb_numpy(ra_array, dec_array)
     pmll, pmbb = pmrapmdec_to_pmllpmbb_numpy(pmra_array, pmdec_array, ra=ra_array, dec=dec_array)

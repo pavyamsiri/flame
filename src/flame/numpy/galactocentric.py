@@ -158,12 +158,13 @@ class NumpyGalactocentricAdapter:
 
     def phase_space_from_icrs[F: np.float64, S: tuple[Any, ...]](
         self,
-        ra: AngleArray[F, S],
-        dec: AngleArray[F, S],
-        distance: onp.ArrayND[F, S],
+        vr: onp.ArrayND[F, S],
         pmracosdec: onp.ArrayND[F, S],
         pmdec: onp.ArrayND[F, S],
-        radial_velocity: onp.ArrayND[F, S],
+        distance: onp.ArrayND[F, S],
+        *,
+        ra: AngleArray[F, S],
+        dec: AngleArray[F, S],
     ) -> tuple[
         onp.ArrayND[np.float64, S],
         onp.ArrayND[np.float64, S],
@@ -176,18 +177,18 @@ class NumpyGalactocentricAdapter:
 
         Parameters
         ----------
-        ra : AngleArray[float]
-            The right ascension.
-        dec : AngleArray[float]
-            The declination.
-        distance : Array[float]
-            The distance.
+        vr : Array[float]
+            The radial velocity in km/s.
         pmracosdec : Array[float]
             The proper motion in right ascension corrected by cos(dec) in mas/yr.
         pmdec : Array[float]
             The proper motion in declination in mas/yr.
-        radial_velocity : Array[float]
-            The radial velocity in km/s.
+        distance : Array[float]
+            The distance.
+        ra : AngleArray[float]
+            The right ascension.
+        dec : AngleArray[float]
+            The declination.
 
         Returns
         -------
@@ -206,7 +207,7 @@ class NumpyGalactocentricAdapter:
 
         """
         gl_x, gl_y, gl_z = icrs_to_galactic_cartesian(ra, dec, distance)
-        gl_vx, gl_vy, gl_vz = icrs_to_galactic_velocity(pmracosdec, pmdec, radial_velocity, ra=ra, dec=dec, distance=distance)
+        gl_vx, gl_vy, gl_vz = icrs_to_galactic_velocity(vr, pmracosdec, pmdec, distance, ra=ra, dec=dec)
 
         gc_x, gc_y, gc_z = self.position_from_galactic(gl_x, gl_y, gl_z)
         gc_vx, gc_vy, gc_vz = self.velocity_from_galactic(gl_vx, gl_vy, gl_vz)
