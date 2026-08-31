@@ -1,5 +1,5 @@
 """Namespace for polars compatible functions and transformations."""
 
-from . import icrs, galactic, geometric
+from . import icrs, galactic, geometric, galactocentric
 
-__all__: list[str] = ["icrs", "galactic", "geometric"]
+__all__: list[str] = ["icrs", "galactic", "geometric", "galactocentric"]

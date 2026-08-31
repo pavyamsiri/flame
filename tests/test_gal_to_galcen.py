@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from dataclasses import FrozenInstanceError
 from typing import TYPE_CHECKING
 
 import numpy as np
 import polars as pl
+import pytest
 from galpy.util import coords as galcoords  # pyright: ignore[reportMissingTypeStubs]
 from hypothesis import assume, given
 from hypothesis import strategies as st
@@ -79,19 +81,30 @@ def test_handedness_changes_the_galactocentric_y_axis() -> None:
     v = np.array([-2.5], dtype=np.float64)
     w = np.array([3.5], dtype=np.float64)
 
-    right = right_frame.gl_xyz_to_gc_xyz_numpy(u, v, w)
-    left = left_frame.gl_xyz_to_gc_xyz_numpy(u, v, w)
+    right = right_frame.numpy.position_from_galactic(u, v, w)
+    left = left_frame.numpy.position_from_galactic(u, v, w)
 
     np.testing.assert_allclose(left[0], right[0])
     np.testing.assert_allclose(left[1] - frame.sun_y(), -(right[1] - frame.sun_y()))
     np.testing.assert_allclose(left[2], right[2])
-    np.testing.assert_allclose(np.linalg.det(right_frame.transforms.pos_matrix), 1.0, atol=1e-10)
+    np.testing.assert_allclose(np.linalg.det(right_frame._transforms.pos_matrix), 1.0, atol=1e-10)
+
+
+def test_cached_transforms_are_not_mutable() -> None:
+    frame = GalactocentricFrame()
+
+    with pytest.raises(AttributeError):
+        frame.transforms = frame._transforms
+    with pytest.raises(FrozenInstanceError):
+        frame.numpy._transforms = frame._transforms
+    with pytest.raises(ValueError):
+        frame._transforms.pos_matrix[0, 0] = 0.0
 
 
 @given(frame=random_frame(), handedness=st.sampled_from(["right", "left"]))
 def test_handedness_orientation_invariants(frame: GalactocentricFrame, handedness: Literal["right", "left"]) -> None:
     frame = with_handedness(frame, handedness)
-    matrix = frame.transforms.pos_matrix
+    matrix = frame._transforms.pos_matrix
     expected_determinant = 1.0 if handedness == "right" else -1.0
 
     np.testing.assert_allclose(matrix.T @ matrix, np.eye(3), atol=1e-10)
@@ -106,8 +119,8 @@ def test_galactocentric_position_round_trip(frame: GalactocentricFrame, handedne
     gl_y = np.array([-2.5], dtype=np.float64)
     gl_z = np.array([3.5], dtype=np.float64)
 
-    gc_x, gc_y, gc_z = frame.gl_xyz_to_gc_xyz_numpy(gl_x, gl_y, gl_z)
-    actual = frame.gc_xyz_to_gl_xyz_numpy(gc_x, gc_y, gc_z)
+    gc_x, gc_y, gc_z = frame.numpy.position_from_galactic(gl_x, gl_y, gl_z)
+    actual = frame.numpy.position_to_galactic(gc_x, gc_y, gc_z)
 
     np.testing.assert_allclose(actual, (gl_x, gl_y, gl_z), atol=_ABS_TOL)
 
@@ -119,8 +132,8 @@ def test_galactocentric_velocity_round_trip(frame: GalactocentricFrame, handedne
     gl_vy = np.array([-2.5], dtype=np.float64)
     gl_vz = np.array([3.5], dtype=np.float64)
 
-    gc_vx, gc_vy, gc_vz = frame.gl_vxvyvz_to_gc_vxvyvz_numpy(gl_vx, gl_vy, gl_vz)
-    actual = frame.gc_vxvyvz_to_gl_vxvyvz_numpy(gc_vx, gc_vy, gc_vz)
+    gc_vx, gc_vy, gc_vz = frame.numpy.velocity_from_galactic(gl_vx, gl_vy, gl_vz)
+    actual = frame.numpy.velocity_to_galactic(gc_vx, gc_vy, gc_vz)
 
     np.testing.assert_allclose(actual, (gl_vx, gl_vy, gl_vz), atol=_ABS_TOL)
 
@@ -145,8 +158,8 @@ def test_gl_xyz_to_gc_xyz(frame: GalactocentricFrame, u: float, v: float, w: flo
         }
     )
 
-    np_x, np_y, np_z = frame.gl_xyz_to_gc_xyz_numpy(gl_x, gl_y, gl_z)
-    pl_x_expr, pl_y_expr, pl_z_expr = frame.gl_xyz_to_gc_xyz_polars(pl.col("gl_x"), pl.col("gl_y"), pl.col("gl_z"))
+    np_x, np_y, np_z = frame.numpy.position_from_galactic(gl_x, gl_y, gl_z)
+    pl_x_expr, pl_y_expr, pl_z_expr = frame.polars.position_from_galactic(pl.col("gl_x"), pl.col("gl_y"), pl.col("gl_z"))
 
     data = data.with_columns(
         pl_x_expr.alias("gc_x"),
@@ -179,8 +192,8 @@ def test_gc_xyz_to_gl_xyz(frame: GalactocentricFrame, x: float, y: float, z: flo
         }
     )
 
-    np_x, np_y, np_z = frame.gc_xyz_to_gl_xyz_numpy(gc_x, gc_y, gc_z)
-    pl_x_expr, pl_y_expr, pl_z_expr = frame.gc_xyz_to_gl_xyz_polars(pl.col("gc_x"), pl.col("gc_y"), pl.col("gc_z"))
+    np_x, np_y, np_z = frame.numpy.position_to_galactic(gc_x, gc_y, gc_z)
+    pl_x_expr, pl_y_expr, pl_z_expr = frame.polars.position_to_galactic(pl.col("gc_x"), pl.col("gc_y"), pl.col("gc_z"))
 
     data = data.with_columns(
         pl_x_expr.alias("gl_x"),
@@ -215,8 +228,8 @@ def test_gl_vxvyvz_to_gc_vxvyvz(
         }
     )
 
-    np_vx, np_vy, np_vz = frame.gl_vxvyvz_to_gc_vxvyvz_numpy(gl_vx, gl_vy, gl_vz)
-    pl_vx_expr, pl_vy_expr, pl_vz_expr = frame.gl_vxvyvz_to_gc_vxvyvz_polars(pl.col("gl_vx"), pl.col("gl_vy"), pl.col("gl_vz"))
+    np_vx, np_vy, np_vz = frame.numpy.velocity_from_galactic(gl_vx, gl_vy, gl_vz)
+    pl_vx_expr, pl_vy_expr, pl_vz_expr = frame.polars.velocity_from_galactic(pl.col("gl_vx"), pl.col("gl_vy"), pl.col("gl_vz"))
 
     data = data.with_columns(
         pl_vx_expr.alias("gc_vx"),
@@ -251,8 +264,8 @@ def test_gc_vxvyvz_to_gl_vxvyvz(
         }
     )
 
-    np_vx, np_vy, np_vz = frame.gc_vxvyvz_to_gl_vxvyvz_numpy(gc_vx, gc_vy, gc_vz)
-    pl_vx_expr, pl_vy_expr, pl_vz_expr = frame.gc_vxvyvz_to_gl_vxvyvz_polars(pl.col("gc_vx"), pl.col("gc_vy"), pl.col("gc_vz"))
+    np_vx, np_vy, np_vz = frame.numpy.velocity_to_galactic(gc_vx, gc_vy, gc_vz)
+    pl_vx_expr, pl_vy_expr, pl_vz_expr = frame.polars.velocity_to_galactic(pl.col("gc_vx"), pl.col("gc_vy"), pl.col("gc_vz"))
 
     data = data.with_columns(
         pl_vx_expr.alias("gl_vx"),
@@ -270,8 +283,8 @@ def test_sun_numpy(frame: GalactocentricFrame, handedness: Literal["right", "lef
     """Check that the Sun in the Galactic frame is at the proper coordinates in the Galactocentric frame."""
     frame = with_handedness(frame, handedness)
     zero_arr = np.array([0], dtype=np.float64)
-    gc_x, gc_y, gc_z = frame.gl_xyz_to_gc_xyz_numpy(zero_arr, zero_arr, zero_arr)
-    gc_vx, gc_vy, gc_vz = frame.gl_vxvyvz_to_gc_vxvyvz_numpy(zero_arr, zero_arr, zero_arr)
+    gc_x, gc_y, gc_z = frame.numpy.position_from_galactic(zero_arr, zero_arr, zero_arr)
+    gc_vx, gc_vy, gc_vz = frame.numpy.velocity_from_galactic(zero_arr, zero_arr, zero_arr)
 
     np.testing.assert_allclose(gc_x[0], frame.sun_x(), atol=_ABS_TOL)
     np.testing.assert_allclose(gc_y[0], frame.sun_y(), atol=_ABS_TOL)
@@ -285,8 +298,8 @@ def test_sun_numpy(frame: GalactocentricFrame, handedness: Literal["right", "lef
 def test_sun_polars(frame: GalactocentricFrame, handedness: Literal["right", "left"]) -> None:
     """Check that the Sun in the Galactic frame is at the proper coordinates in the Galactocentric frame."""
     frame = with_handedness(frame, handedness)
-    gc_x_expr, gc_y_expr, gc_z_expr = frame.gl_xyz_to_gc_xyz_polars(pl.col("gl_x"), pl.col("gl_y"), pl.col("gl_z"))
-    gc_vx_expr, gc_vy_expr, gc_vz_expr = frame.gl_vxvyvz_to_gc_vxvyvz_polars(pl.col("gl_vx"), pl.col("gl_vy"), pl.col("gl_vz"))
+    gc_x_expr, gc_y_expr, gc_z_expr = frame.polars.position_from_galactic(pl.col("gl_x"), pl.col("gl_y"), pl.col("gl_z"))
+    gc_vx_expr, gc_vy_expr, gc_vz_expr = frame.polars.velocity_from_galactic(pl.col("gl_vx"), pl.col("gl_vy"), pl.col("gl_vz"))
 
     data = pl.DataFrame(
         {
@@ -336,7 +349,7 @@ def test_collinear_numpy(
     gal_y = dist * np.cos(lat) * np.sin(lon)
     gal_z = dist * np.sin(lat)
 
-    gc_x, gc_y, gc_z = frame.gl_xyz_to_gc_xyz_numpy(gal_x, gal_y, gal_z)
+    gc_x, gc_y, gc_z = frame.numpy.position_from_galactic(gal_x, gal_y, gal_z)
 
     # They should be collinear with the Sun
     vec1 = np.array([gc_x[1] - gc_x[0], gc_y[1] - gc_y[0], gc_z[1] - gc_z[0]])
@@ -363,7 +376,7 @@ def test_collinear_polars(
     gl_x_expr, gl_y_expr, gl_z_expr = spherical_to_cartesian_polars(
         AngleExpr(pl.col("lon"), "deg"), AngleExpr(pl.col("lat"), "deg"), pl.col("distance")
     )
-    gc_x_expr, gc_y_expr, gc_z_expr = frame.gl_xyz_to_gc_xyz_polars(
+    gc_x_expr, gc_y_expr, gc_z_expr = frame.polars.position_from_galactic(
         gl_x_expr.alias("gl_x"), gl_y_expr.alias("gl_y"), gl_z_expr.alias("gl_z")
     )
     data = pl.DataFrame(
@@ -414,8 +427,8 @@ def test_gl_xyz_to_gc_xyz_galpy(frame: GalactocentricFrame, u: float, v: float, 
 
     x_sign: float = 1 if frame.sun_x() >= 0 else -1
 
-    np_x, np_y, np_z = frame.gl_xyz_to_gc_xyz_numpy(gl_x, gl_y, gl_z)
-    pl_x_expr, pl_y_expr, pl_z_expr = frame.gl_xyz_to_gc_xyz_polars(pl.col("gl_x"), pl.col("gl_y"), pl.col("gl_z"))
+    np_x, np_y, np_z = frame.numpy.position_from_galactic(gl_x, gl_y, gl_z)
+    pl_x_expr, pl_y_expr, pl_z_expr = frame.polars.position_from_galactic(pl.col("gl_x"), pl.col("gl_y"), pl.col("gl_z"))
 
     gal_xyz = galcoords.XYZ_to_galcenrect(
         gl_x, x_sign * gl_y, gl_z, Xsun=x_sign * frame.sun_rxy(), Zsun=frame.sun_z(), _extra_rot=True
@@ -463,8 +476,8 @@ def test_gl_vxvyvz_to_gc_vxvyvz_galpy(frame: GalactocentricFrame, v_u: float, v_
 
     x_sign: float = 1 if frame.sun_x() >= 0 else -1
 
-    np_vx, np_vy, np_vz = frame.gl_vxvyvz_to_gc_vxvyvz_numpy(gl_vx, gl_vy, gl_vz)
-    pl_vx_expr, pl_vy_expr, pl_vz_expr = frame.gl_vxvyvz_to_gc_vxvyvz_polars(pl.col("gl_vx"), pl.col("gl_vy"), pl.col("gl_vz"))
+    np_vx, np_vy, np_vz = frame.numpy.velocity_from_galactic(gl_vx, gl_vy, gl_vz)
+    pl_vx_expr, pl_vy_expr, pl_vz_expr = frame.polars.velocity_from_galactic(pl.col("gl_vx"), pl.col("gl_vy"), pl.col("gl_vz"))
 
     gal_vxvyvz = galcoords.vxvyvz_to_galcenrect(
         gl_vx,
