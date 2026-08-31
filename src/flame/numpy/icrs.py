@@ -2,42 +2,15 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, cast
+from typing import Any, cast
 
 import numpy as np
 from optype import numpy as onp
 
-from flame._icrs import DEC_NGP, RA_NGP, THETA
+from flame._icrs import DEC_NGP, RA_NGP, TRANSFORMATION_MATRIX
 from flame.units import AngleArray
 
-if TYPE_CHECKING:
-    from typing import Final
-
-
 __all__: list[str] = ["radec_to_lb", "pmrapmdec_to_pmllpmbb"]
-
-
-_THETA_MATRIX: Final[onp.Array2D[np.float64]] = np.array(
-    [
-        [np.cos(THETA), np.sin(THETA), 0.0],
-        [np.sin(THETA), -np.cos(THETA), 0.0],
-        [0.0, 0.0, 1.0],
-    ],
-    dtype=np.float64,
-)
-_DEC_MATRIX: Final[onp.Array2D[np.float64]] = np.array(
-    [
-        [-np.sin(DEC_NGP), 0.0, np.cos(DEC_NGP)],
-        [0.0, 1.0, 0.0],
-        [np.cos(DEC_NGP), 0.0, np.sin(DEC_NGP)],
-    ],
-    dtype=np.float64,
-)
-_RA_MATRIX: Final[onp.Array2D[np.float64]] = np.array(
-    ((np.cos(RA_NGP), np.sin(RA_NGP), 0.0), (-np.sin(RA_NGP), np.cos(RA_NGP), 0.0), (0.0, 0.0, 1.0)),
-    dtype=np.float64,
-)
-_TRANSFORMATION_MATRIX: Final[onp.Array2D[np.float64]] = _THETA_MATRIX @ _DEC_MATRIX @ _RA_MATRIX
 
 
 def radec_to_lb[F: np.float64, S: tuple[Any, ...]](
@@ -70,7 +43,7 @@ def radec_to_lb[F: np.float64, S: tuple[Any, ...]](
         ],
         dtype=np.float64,
     )
-    gl_xyz = np.dot(_TRANSFORMATION_MATRIX, xyz)
+    gl_xyz = np.dot(TRANSFORMATION_MATRIX, xyz)
     # Clamp
     gl_xyz[2][gl_xyz[2] > +1.0] = +1.0
     gl_xyz[2][gl_xyz[2] < -1.0] = -1.0
