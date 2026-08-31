@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import numpy as np
 import polars as pl
-from galpy.util import coords as galcoords
+from galpy.util import coords as galcoords  # pyright: ignore[reportMissingTypeStubs]
 from hypothesis import given
 from hypothesis import strategies as st
 
-from flame.icrs import pmrapmdec_to_pmllpmbb_numpy, pmrapmdec_to_pmllpmbb_polars, radec_to_lb_numpy, radec_to_lb_polars
+from flame.numpy.icrs import pmrapmdec_to_pmllpmbb as pmrapmdec_to_pmllpmbb_numpy
+from flame.numpy.icrs import radec_to_lb as radec_to_lb_numpy
+from flame.polars.icrs import pmrapmdec_to_pmllpmbb as pmrapmdec_to_pmllpmbb_polars
+from flame.polars.icrs import radec_to_lb as radec_to_lb_polars
 from flame.units import AngleArray, AngleExpr
 
 

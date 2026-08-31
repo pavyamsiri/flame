@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import polars as pl
-from galpy.util import coords as galcoords
+from galpy.util import coords as galcoords  # pyright: ignore[reportMissingTypeStubs]
 from hypothesis import assume, given
 from hypothesis import strategies as st
 
@@ -363,7 +363,9 @@ def test_collinear_polars(
     gl_x_expr, gl_y_expr, gl_z_expr = spherical_to_cartesian_polars(
         AngleExpr(pl.col("lon"), "deg"), AngleExpr(pl.col("lat"), "deg"), pl.col("distance")
     )
-    gc_x_expr, gc_y_expr, gc_z_expr = frame.gl_xyz_to_gc_xyz_polars(gl_x_expr.alias("gl_x"), gl_y_expr.alias("gl_y"), gl_z_expr.alias("gl_z"))
+    gc_x_expr, gc_y_expr, gc_z_expr = frame.gl_xyz_to_gc_xyz_polars(
+        gl_x_expr.alias("gl_x"), gl_y_expr.alias("gl_y"), gl_z_expr.alias("gl_z")
+    )
     data = pl.DataFrame(
         {
             "lon": [lon, lon, lon],
