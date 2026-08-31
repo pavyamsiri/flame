@@ -7,9 +7,9 @@ import polars as pl
 from flame.units import AngleExpr
 from flame._galactic import MAS_PER_YR_TO_KM_PER_S_PER_KPC
 
-from .geometric import spherical_velocity_to_cartesian
+from .geometric import cartesian_velocity_to_spherical, spherical_velocity_to_cartesian
 
-__all__: list[str] = ["vrpmllpmbb_to_vxvyvz"]
+__all__: list[str] = ["vrpmllpmbb_to_vxvyvz", "vxvyvz_to_vrpmllpmbb"]
 
 
 def vrpmllpmbb_to_vxvyvz(
@@ -54,3 +54,16 @@ def vrpmllpmbb_to_vxvyvz(
     longitude_velocity = distance * pmll * MAS_PER_YR_TO_KM_PER_S_PER_KPC
     latitude_velocity = distance * pmbb * MAS_PER_YR_TO_KM_PER_S_PER_KPC
     return spherical_velocity_to_cartesian(vr, longitude_velocity, latitude_velocity, lon, lat)
+
+
+def vxvyvz_to_vrpmllpmbb(
+    vx: pl.Expr, vy: pl.Expr, vz: pl.Expr, lon: AngleExpr, lat: AngleExpr, distance: pl.Expr
+) -> tuple[pl.Expr, pl.Expr, pl.Expr]:
+    """Transform Galactic Cartesian velocities to radial and proper-motion velocities.
+
+    Proper motions are undefined at zero distance; the corresponding Polars
+    expressions evaluate according to its floating-point division semantics.
+    """
+    vr, longitude_velocity, latitude_velocity = cartesian_velocity_to_spherical(vx, vy, vz, lon, lat)
+    scale = distance * MAS_PER_YR_TO_KM_PER_S_PER_KPC
+    return (vr, longitude_velocity / scale, latitude_velocity / scale)

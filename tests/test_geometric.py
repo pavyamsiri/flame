@@ -10,13 +10,133 @@ from hypothesis import strategies as st
 
 from flame.numpy.geometric import cartesian_to_polar as cartesian_to_polar_numpy
 from flame.numpy.geometric import cartesian_vec_to_polar_vec as cartesian_vec_to_polar_vec_numpy
+from flame.numpy.geometric import cartesian_to_spherical as cartesian_to_spherical_numpy
+from flame.numpy.geometric import cartesian_velocity_to_spherical as cartesian_velocity_to_spherical_numpy
+from flame.numpy.geometric import cylindrical_to_cartesian as cylindrical_to_cartesian_numpy
+from flame.numpy.geometric import cylindrical_velocity_to_cartesian as cylindrical_velocity_to_cartesian_numpy
+from flame.numpy.geometric import cartesian_to_cylindrical as cartesian_to_cylindrical_numpy
+from flame.numpy.geometric import cartesian_velocity_to_cylindrical as cartesian_velocity_to_cylindrical_numpy
+from flame.numpy.geometric import spherical_to_cartesian as spherical_to_cartesian_numpy
 from flame.numpy.geometric import spherical_velocity_to_cartesian as spherical_velocity_to_cartesian_numpy
 from flame.polars.geometric import cartesian_to_polar as cartesian_to_polar_polars
 from flame.polars.geometric import cartesian_vec_to_polar_vec as cartesian_vec_to_polar_vec_polars
+from flame.polars.geometric import cartesian_to_spherical as cartesian_to_spherical_polars
+from flame.polars.geometric import cartesian_velocity_to_spherical as cartesian_velocity_to_spherical_polars
+from flame.polars.geometric import cylindrical_to_cartesian as cylindrical_to_cartesian_polars
+from flame.polars.geometric import cylindrical_velocity_to_cartesian as cylindrical_velocity_to_cartesian_polars
+from flame.polars.geometric import cartesian_to_cylindrical as cartesian_to_cylindrical_polars
+from flame.polars.geometric import cartesian_velocity_to_cylindrical as cartesian_velocity_to_cylindrical_polars
 from flame.polars.geometric import spherical_velocity_to_cartesian as spherical_velocity_to_cartesian_polars
 from flame.units import AngleArray, AngleExpr
 
 _ABS_TOL: float = 1e-21
+
+
+def test_cartesian_to_spherical_origin_uses_zero_angles() -> None:
+    zeros = np.array([0.0])
+    lon, lat, distance = cartesian_to_spherical_numpy(zeros, zeros, zeros)
+    data = pl.DataFrame({"x": zeros, "y": zeros, "z": zeros})
+    polars_actual = cartesian_to_spherical_polars(pl.col("x"), pl.col("y"), pl.col("z"))
+    data = data.select(
+        polars_actual[0].to_radians().alias("lon"), polars_actual[1].to_radians().alias("lat"), polars_actual[2].alias("distance")
+    )
+
+    np.testing.assert_array_equal(lon.to_radians(), zeros)
+    np.testing.assert_array_equal(lat.to_radians(), zeros)
+    np.testing.assert_array_equal(distance, zeros)
+    np.testing.assert_array_equal(data.to_numpy().T, (zeros, zeros, zeros))
+
+
+@given(
+    lon=st.floats(min_value=0, max_value=2 * np.pi, allow_subnormal=False),
+    lat=st.floats(min_value=-np.pi / 2, max_value=np.pi / 2, allow_subnormal=False),
+    distance=st.floats(min_value=1e-6, max_value=1e9, allow_subnormal=False),
+)
+def test_cartesian_to_spherical(lon: float, lat: float, distance: float) -> None:
+    lon_array = AngleArray(np.array([lon]), "rad")
+    lat_array = AngleArray(np.array([lat]), "rad")
+    distance_array = np.array([distance])
+    x, y, z = spherical_to_cartesian_numpy(lon_array, lat_array, distance_array)
+    actual_lon, actual_lat, actual_distance = cartesian_to_spherical_numpy(x, y, z)
+
+    data = pl.DataFrame({"x": x, "y": y, "z": z})
+    polars_actual = cartesian_to_spherical_polars(pl.col("x"), pl.col("y"), pl.col("z"))
+    data = data.select(
+        polars_actual[0].to_radians().alias("lon"), polars_actual[1].to_radians().alias("lat"), polars_actual[2].alias("distance")
+    )
+
+    np.testing.assert_allclose(data["lon"].to_numpy(), actual_lon.to_radians())
+    np.testing.assert_allclose(data["lat"].to_numpy(), actual_lat.to_radians())
+    np.testing.assert_allclose(data["distance"].to_numpy(), actual_distance, atol=1e-12)
+    np.testing.assert_allclose(actual_distance, distance_array, atol=1e-12)
+    if abs(np.cos(lat)) > 1e-12:
+        np.testing.assert_allclose(np.sin(actual_lon.to_radians()), np.sin(lon_array.to_radians()))
+        np.testing.assert_allclose(np.cos(actual_lon.to_radians()), np.cos(lon_array.to_radians()))
+        np.testing.assert_allclose(actual_lat.to_radians(), lat_array.to_radians())
+
+
+@given(
+    vr=st.floats(min_value=-1e9, max_value=1e9, allow_subnormal=False),
+    longitude_velocity=st.floats(min_value=-1e9, max_value=1e9, allow_subnormal=False),
+    latitude_velocity=st.floats(min_value=-1e9, max_value=1e9, allow_subnormal=False),
+    lon=st.floats(min_value=0, max_value=2 * np.pi, allow_subnormal=False),
+    lat=st.floats(min_value=-np.pi / 2 + 1e-8, max_value=np.pi / 2 - 1e-8, allow_subnormal=False),
+)
+def test_cartesian_velocity_to_spherical(
+    vr: float, longitude_velocity: float, latitude_velocity: float, lon: float, lat: float
+) -> None:
+    lon_array = AngleArray(np.array([lon]), "rad")
+    lat_array = AngleArray(np.array([lat]), "rad")
+    vx, vy, vz = spherical_velocity_to_cartesian_numpy(
+        np.array([vr]), np.array([longitude_velocity]), np.array([latitude_velocity]), lon_array, lat_array
+    )
+    actual = cartesian_velocity_to_spherical_numpy(vx, vy, vz, lon_array, lat_array)
+
+    data = pl.DataFrame({"vx": vx, "vy": vy, "vz": vz, "lon": [lon], "lat": [lat]})
+    polars_actual = cartesian_velocity_to_spherical_polars(
+        pl.col("vx"), pl.col("vy"), pl.col("vz"), AngleExpr(pl.col("lon"), "rad"), AngleExpr(pl.col("lat"), "rad")
+    )
+    data = data.select(polars_actual[0].alias("vr"), polars_actual[1].alias("longitude_velocity"), polars_actual[2].alias("latitude_velocity"))
+
+    np.testing.assert_allclose(data.to_numpy().T, actual)
+    np.testing.assert_allclose(actual, (np.array([vr]), np.array([longitude_velocity]), np.array([latitude_velocity])), atol=1e-6)
+
+
+@given(
+    radius=st.floats(min_value=1e-6, max_value=1e9, allow_subnormal=False),
+    phi=st.floats(min_value=0, max_value=2 * np.pi, allow_subnormal=False),
+    z=st.floats(min_value=-1e9, max_value=1e9, allow_subnormal=False),
+    v_radius=st.floats(min_value=-1e9, max_value=1e9, allow_subnormal=False),
+    v_phi=st.floats(min_value=-1e9, max_value=1e9, allow_subnormal=False),
+    vz=st.floats(min_value=-1e9, max_value=1e9, allow_subnormal=False),
+)
+def test_cylindrical_round_trip(radius: float, phi: float, z: float, v_radius: float, v_phi: float, vz: float) -> None:
+    phi_array = AngleArray(np.array([phi]), "rad")
+    radius_array = np.array([radius])
+    z_array = np.array([z])
+    v_radius_array = np.array([v_radius])
+    v_phi_array = np.array([v_phi])
+    vz_array = np.array([vz])
+    x, y, actual_z = cylindrical_to_cartesian_numpy(radius_array, phi_array, z_array)
+    actual_radius, actual_phi, round_trip_z = cartesian_to_cylindrical_numpy(x, y, actual_z)
+    vx, vy, actual_vz = cylindrical_velocity_to_cartesian_numpy(v_radius_array, v_phi_array, vz_array, phi_array)
+    actual_v_radius, actual_v_phi, round_trip_vz = cartesian_velocity_to_cylindrical_numpy(vx, vy, actual_vz, phi_array)
+
+    data = pl.DataFrame({"radius": [radius], "phi": [phi], "z": [z], "v_radius": [v_radius], "v_phi": [v_phi], "vz": [vz]})
+    position = cylindrical_to_cartesian_polars(pl.col("radius"), AngleExpr(pl.col("phi"), "rad"), pl.col("z"))
+    velocity = cylindrical_velocity_to_cartesian_polars(pl.col("v_radius"), pl.col("v_phi"), pl.col("vz"), AngleExpr(pl.col("phi"), "rad"))
+    data = data.with_columns(position[0].alias("x"), position[1].alias("y"), position[2].alias("actual_z"), velocity[0].alias("vx"), velocity[1].alias("vy"), velocity[2].alias("actual_vz"))
+    polars_position = cartesian_to_cylindrical_polars(pl.col("x"), pl.col("y"), pl.col("actual_z"))
+    polars_velocity = cartesian_velocity_to_cylindrical_polars(pl.col("vx"), pl.col("vy"), pl.col("actual_vz"), AngleExpr(pl.col("phi"), "rad"))
+    data = data.select(polars_position[0].alias("radius"), polars_position[1].to_radians().alias("phi"), polars_position[2].alias("z"), polars_velocity[0].alias("v_radius"), polars_velocity[1].alias("v_phi"), polars_velocity[2].alias("vz"))
+
+    np.testing.assert_allclose(data.to_numpy().T, (actual_radius, actual_phi.to_radians(), round_trip_z, actual_v_radius, actual_v_phi, round_trip_vz))
+    np.testing.assert_allclose(actual_radius, radius_array)
+    np.testing.assert_allclose(round_trip_z, z_array)
+    np.testing.assert_allclose((actual_v_radius, actual_v_phi, round_trip_vz), (v_radius_array, v_phi_array, vz_array), atol=1e-6)
+    if radius != 0:
+        np.testing.assert_allclose(np.sin(actual_phi.to_radians()), np.sin(phi_array.to_radians()))
+        np.testing.assert_allclose(np.cos(actual_phi.to_radians()), np.cos(phi_array.to_radians()))
 
 
 @given(

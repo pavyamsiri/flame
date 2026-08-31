@@ -1,4 +1,24 @@
-"Routines to transform to and from the Galactocentric frame."
+"""Routines to transform to and from configurable Galactocentric frames.
+
+Each :class:`GalactocentricFrame` binds Solar position (kpc), Solar velocity
+(km/s), and Cartesian handedness at construction. Its ``numpy`` and ``polars``
+adapters transform exclusively in that convention.
+
+The package-default frame is right-handed: the Sun is at
+``(-8.122, 0, 0.0208)`` kpc with velocity ``(12.9, 245.6, 7.78)`` km/s. The
+positive x axis points from the Galactic centre toward the Sun, positive z
+points to the north Galactic pole, and positive y completes the right-handed
+system. Consequently positive cylindrical ``v_phi`` points from +x toward +y.
+
+:func:`galpy_compatible_frame` instead constructs a left-handed frame using
+the same Solar parameters, matching galpy's Galactocentric axis orientation.
+Handedness is always chosen explicitly; transformations never change it
+implicitly.
+
+Distances are measured in kpc, velocities in km/s, and proper motions in
+mas/yr. NumPy functions support normal broadcasting, while Polars functions
+return lazy expressions.
+"""
 
 from __future__ import annotations
 
@@ -9,6 +29,8 @@ from optype import numpy as onp
 from flame._galactocentric import AffineTransforms
 from flame.numpy.galactocentric import NumpyGalactocentricAdapter
 from flame.polars.galactocentric import PolarsGalactocentricAdapter
+
+__all__: list[str] = ["GalactocentricFrame", "default_galactocentric_frame", "galpy_compatible_frame"]
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -80,7 +102,13 @@ class GalactocentricFrame:
         *,
         handedness: Literal["left", "right"] = "right",
     ) -> None:
-        assert handedness in ("left", "right"), "`handedness `must be either `left` or `right`"
+        if handedness not in ("left", "right"):
+            msg = "handedness must be either 'left' or 'right'"
+            raise ValueError(msg)
+        parameters = (sun_x, sun_y, sun_z, sun_vx, sun_vy, sun_vz)
+        if not all(np.isfinite(parameter) for parameter in parameters):
+            msg = "Solar position and velocity parameters must be finite"
+            raise ValueError(msg)
         self._sun_x: float = sun_x
         self._sun_y: float = sun_y
         self._sun_z: float = sun_z
@@ -164,7 +192,25 @@ class GalactocentricFrame:
 
     def __repr__(self) -> str:
         class_name = self.__class__.__name__
-        return f"{class_name}(sun_x={self._sun_x},sun_y={self._sun_y},sun_z={self._sun_z},sun_vx={self._sun_vx},sun_vy={self._sun_vy},sun_vz={self._sun_vz})"
+        return (
+            f"{class_name}(sun_x={self._sun_x}, sun_y={self._sun_y}, sun_z={self._sun_z}, "
+            f"sun_vx={self._sun_vx}, sun_vy={self._sun_vy}, sun_vz={self._sun_vz}, handedness={self._handedness!r})"
+        )
+
+    @property
+    def handedness(self) -> Literal["left", "right"]:
+        """Whether the Galactocentric Cartesian axes are left- or right-handed."""
+        return self._handedness
+
+    @property
+    def sun_position(self) -> tuple[float, float, float]:
+        """Solar Galactocentric position ``(x, y, z)`` in kpc."""
+        return (self._sun_x, self._sun_y, self._sun_z)
+
+    @property
+    def sun_velocity(self) -> tuple[float, float, float]:
+        """Solar Galactocentric velocity ``(vx, vy, vz)`` in km/s."""
+        return (self._sun_vx, self._sun_vy, self._sun_vz)
 
     def sun_x(self) -> float:
         return self._sun_x
@@ -189,3 +235,13 @@ class GalactocentricFrame:
 
     def sun_rxy(self) -> float:
         return np.sqrt(self._sun_x**2 + self._sun_y**2)
+
+
+def default_galactocentric_frame() -> GalactocentricFrame:
+    """Create a package-default right-handed Galactocentric frame."""
+    return GalactocentricFrame()
+
+
+def galpy_compatible_frame() -> GalactocentricFrame:
+    """Create a left-handed frame with the default Solar parameters and galpy's axis orientation."""
+    return GalactocentricFrame(handedness="left")

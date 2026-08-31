@@ -10,7 +10,7 @@ from galpy.util import coords as galcoords  # pyright: ignore[reportMissingTypeS
 from hypothesis import assume, given
 from hypothesis import strategies as st
 
-from flame.galactocentric import GalactocentricFrame
+from flame.galactocentric import GalactocentricFrame, default_galactocentric_frame, galpy_compatible_frame
 from flame.numpy.icrs import icrs_to_galactic_cartesian as icrs_to_galactic_cartesian_numpy
 from flame.numpy.icrs import icrs_to_galactic_velocity as icrs_to_galactic_velocity_numpy
 from flame.polars.geometric import spherical_to_cartesian as spherical_to_cartesian_polars
@@ -102,6 +102,20 @@ def test_cached_transforms_are_not_mutable() -> None:
         frame.numpy._transforms = frame._transforms
     with pytest.raises(ValueError):
         frame._transforms.pos_matrix[0, 0] = 0.0
+
+
+def test_frame_metadata_presets_and_validation() -> None:
+    frame = GalactocentricFrame(sun_x=-8.0, sun_y=0.0, sun_z=0.02, sun_vx=10.0, sun_vy=230.0, sun_vz=8.0)
+
+    assert frame.handedness == "right"
+    assert frame.sun_position == (-8.0, 0.0, 0.02)
+    assert frame.sun_velocity == (10.0, 230.0, 8.0)
+    assert default_galactocentric_frame().handedness == "right"
+    assert galpy_compatible_frame().handedness == "left"
+    with pytest.raises(ValueError, match="handedness"):
+        GalactocentricFrame(handedness="invalid")  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="finite"):
+        GalactocentricFrame(sun_x=float("nan"))
 
 
 def test_phase_space_from_icrs() -> None:
