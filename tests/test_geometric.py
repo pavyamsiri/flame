@@ -4,18 +4,15 @@ from __future__ import annotations
 
 import numpy as np
 import polars as pl
+from galpy.util import coords as galcoords  # pyright: ignore[reportMissingTypeStubs]
 from hypothesis import given
 from hypothesis import strategies as st
-from galpy.util import coords as galcoords
 
-from flame.geometric import (
-    cartesian_vec_to_polar_vec_numpy,
-    cartesian_vec_to_polar_vec_polars,
-    cartesian_to_polar_numpy,
-    cartesian_to_polar_polars,
-)
+from flame.numpy.geometric import cartesian_to_polar as cartesian_to_polar_numpy
+from flame.numpy.geometric import cartesian_vec_to_polar_vec as cartesian_vec_to_polar_vec_numpy
+from flame.polars.geometric import cartesian_to_polar as cartesian_to_polar_polars
+from flame.polars.geometric import cartesian_vec_to_polar_vec as cartesian_vec_to_polar_vec_polars
 from flame.units import AngleArray, AngleExpr
-
 
 _ABS_TOL: float = 1e-21
 

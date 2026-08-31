@@ -9,8 +9,8 @@ from hypothesis import assume, given
 from hypothesis import strategies as st
 
 from flame.galactocentric import GalactocentricFrame
+from flame.polars.geometric import spherical_to_cartesian as spherical_to_cartesian_polars
 from flame.units import AngleExpr
-from flame.geometric import spherical_to_cartesian_polars
 
 if TYPE_CHECKING:
     from typing import Literal
