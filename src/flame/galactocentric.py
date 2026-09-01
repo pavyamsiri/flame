@@ -22,7 +22,7 @@ return lazy expressions.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Final, override
 
 import numpy as np
 
@@ -196,6 +196,7 @@ class GalactocentricFrame:
             vel_translation_inv=vel_translation_inv,
         )
 
+    @override
     def __repr__(self) -> str:
         """Return a reconstructible representation of the frame parameters.
 

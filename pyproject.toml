@@ -41,6 +41,11 @@ reportUnknownMemberType = false
 reportUnknownVariableType = false
 reportArgumentType = false
 
+[tool.mypy]
+allow_any_expr = true
+allow_any_explicit = true
+warn_return_any = false
+
 [tool.ruff]
 line-length = 130
 
