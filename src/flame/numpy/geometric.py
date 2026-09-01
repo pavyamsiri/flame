@@ -25,7 +25,7 @@ __all__: list[str] = [
 ]
 
 
-def spherical_to_cartesian[F: np.float64, S: tuple[Any, ...]](
+def spherical_to_cartesian[F: np.floating, S: tuple[Any, ...]](
     lon: AngleArray[F, S], lat: AngleArray[F, S], distance: onp.ArrayND[F, S]
 ) -> tuple[onp.ArrayND[np.float64, S], onp.ArrayND[np.float64, S], onp.ArrayND[np.float64, S]]:
     """Transform spherical coordinates to Cartesian coordinates.
@@ -62,7 +62,7 @@ def spherical_to_cartesian[F: np.float64, S: tuple[Any, ...]](
     return (x, y, z)
 
 
-def cartesian_to_spherical[F: np.float64, S: tuple[Any, ...]](
+def cartesian_to_spherical[F: np.floating, S: tuple[Any, ...]](
     x: onp.ArrayND[F, S], y: onp.ArrayND[F, S], z: onp.ArrayND[F, S]
 ) -> tuple[AngleArray[np.float64, S], AngleArray[np.float64, S], onp.ArrayND[np.float64, S]]:
     """Transform Cartesian coordinates to spherical coordinates.
@@ -96,7 +96,7 @@ def cartesian_to_spherical[F: np.float64, S: tuple[Any, ...]](
     return (AngleArray(lon, "rad"), AngleArray(lat, "rad"), distance)
 
 
-def spherical_velocity_to_cartesian[F: np.float64, S: tuple[Any, ...]](
+def spherical_velocity_to_cartesian[F: np.floating, S: tuple[Any, ...]](
     vr: onp.ArrayND[F, S],
     longitude_velocity: onp.ArrayND[F, S],
     latitude_velocity: onp.ArrayND[F, S],
@@ -150,7 +150,7 @@ def spherical_velocity_to_cartesian[F: np.float64, S: tuple[Any, ...]](
     return (vx, vy, vz)
 
 
-def cartesian_velocity_to_spherical[F: np.float64, S: tuple[Any, ...]](
+def cartesian_velocity_to_spherical[F: np.floating, S: tuple[Any, ...]](
     vx: onp.ArrayND[F, S],
     vy: onp.ArrayND[F, S],
     vz: onp.ArrayND[F, S],
@@ -191,7 +191,7 @@ def cartesian_velocity_to_spherical[F: np.float64, S: tuple[Any, ...]](
     return (vr, longitude_velocity, latitude_velocity)
 
 
-def cartesian_to_polar[F: np.float64, S: tuple[Any, ...]](
+def cartesian_to_polar[F: np.floating, S: tuple[Any, ...]](
     x: onp.ArrayND[F, S], y: onp.ArrayND[F, S]
 ) -> tuple[onp.ArrayND[np.float64, S], AngleArray[np.float64, S]]:
     """Transform Cartesian coordinates to polar coordinates.
@@ -217,7 +217,7 @@ def cartesian_to_polar[F: np.float64, S: tuple[Any, ...]](
     return (rxy, AngleArray(phi, "rad"))
 
 
-def cartesian_vec_to_polar_vec[F: np.float64, S: tuple[Any, ...]](
+def cartesian_vec_to_polar_vec[F: np.floating, S: tuple[Any, ...]](
     vx: onp.ArrayND[F, S], vy: onp.ArrayND[F, S], phi: AngleArray[F, S]
 ) -> tuple[onp.ArrayND[np.float64, S], onp.ArrayND[np.float64, S]]:
     """Transform Cartesian velocity to polar velocity.
@@ -248,7 +248,7 @@ def cartesian_vec_to_polar_vec[F: np.float64, S: tuple[Any, ...]](
     return (vr, vphi)
 
 
-def cartesian_to_cylindrical[F: np.float64, S: tuple[Any, ...]](
+def cartesian_to_cylindrical[F: np.floating, S: tuple[Any, ...]](
     x: onp.ArrayND[F, S], y: onp.ArrayND[F, S], z: onp.ArrayND[F, S]
 ) -> tuple[onp.ArrayND[np.float64, S], AngleArray[np.float64, S], onp.ArrayND[F, S]]:
     """Transform Cartesian positions to cylindrical ``(radius, phi, z)`` coordinates.
@@ -278,7 +278,7 @@ def cartesian_to_cylindrical[F: np.float64, S: tuple[Any, ...]](
     return (radius, AngleArray(phi_radians, "rad"), z)
 
 
-def cylindrical_to_cartesian[F: np.float64, S: tuple[Any, ...]](
+def cylindrical_to_cartesian[F: np.floating, S: tuple[Any, ...]](
     radius: onp.ArrayND[F, S], phi: AngleArray[F, S], z: onp.ArrayND[F, S]
 ) -> tuple[onp.ArrayND[np.float64, S], onp.ArrayND[np.float64, S], onp.ArrayND[F, S]]:
     """Transform cylindrical ``(radius, phi, z)`` coordinates to Cartesian coordinates.
@@ -304,7 +304,7 @@ def cylindrical_to_cartesian[F: np.float64, S: tuple[Any, ...]](
     return (x, y, z)
 
 
-def cartesian_velocity_to_cylindrical[F: np.float64, S: tuple[Any, ...]](
+def cartesian_velocity_to_cylindrical[F: np.floating, S: tuple[Any, ...]](
     vx: onp.ArrayND[F, S], vy: onp.ArrayND[F, S], vz: onp.ArrayND[F, S], phi: AngleArray[F, S]
 ) -> tuple[onp.ArrayND[np.float64, S], onp.ArrayND[np.float64, S], onp.ArrayND[F, S]]:
     """Transform Cartesian velocities to cylindrical ``(v_radius, v_phi, v_z)``.
@@ -333,7 +333,7 @@ def cartesian_velocity_to_cylindrical[F: np.float64, S: tuple[Any, ...]](
     return (v_radius, v_phi, vz)
 
 
-def cylindrical_velocity_to_cartesian[F: np.float64, S: tuple[Any, ...]](
+def cylindrical_velocity_to_cartesian[F: np.floating, S: tuple[Any, ...]](
     v_radius: onp.ArrayND[F, S], v_phi: onp.ArrayND[F, S], vz: onp.ArrayND[F, S], phi: AngleArray[F, S]
 ) -> tuple[onp.ArrayND[np.float64, S], onp.ArrayND[np.float64, S], onp.ArrayND[F, S]]:
     """Transform cylindrical ``(v_radius, v_phi, v_z)`` velocities to Cartesian velocities.

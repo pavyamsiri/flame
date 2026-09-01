@@ -177,7 +177,7 @@ class GalactocentricFrame:
         orientation_matrix = _RIGHT_HANDED_ORIENTATION if handedness == "right" else _LEFT_HANDED_ORIENTATION
         pos_matrix = rxz_matrix @ orientation_matrix @ GALCEN_EXTRA_ROT @ rxy_matrix.T
         pos_translation = np.array([sun_x, sun_y, sun_z])
-        pos_matrix_inv = np.linalg.inv(pos_matrix)
+        pos_matrix_inv: onp.Array2D[np.float64] = np.linalg.inv(pos_matrix).astype(np.float64)
         pos_translation_inv = -pos_matrix_inv @ pos_translation
 
         vel_matrix = pos_matrix

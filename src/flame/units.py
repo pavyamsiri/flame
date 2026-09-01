@@ -65,7 +65,7 @@ class AngleExpr:
                 return self.data.degrees()
 
 
-class AngleArray[F: np.float64, S: tuple[Any, ...]]:
+class AngleArray[F: np.floating, S: tuple[Any, ...]]:
     """A NumPy array carrying an angular unit annotation."""
 
     def __init__(self, data: onp.ArrayND[F, S], units: Literal["deg", "rad"]) -> None:
@@ -101,3 +101,14 @@ class AngleArray[F: np.float64, S: tuple[Any, ...]]:
                 return self.data.astype(np.float64)
             case "rad":
                 return cast("onp.ArrayND[np.float64, S]", np.degrees(self.data).astype(np.float64))
+
+    def astype[F1: np.floating](self, dtype: type[F1]) -> AngleArray[F1, S]:
+        """Return the array cast to the given dtype.
+
+        Returns
+        -------
+        AngleArray[F1]
+            The array cast into the F dtype.
+
+        """
+        return AngleArray(self.data.astype(dtype), self.units)

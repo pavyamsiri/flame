@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 __all__: list[str] = ["vrpmllpmbb_to_vxvyvz", "vxvyvz_to_vrpmllpmbb"]
 
 
-def vrpmllpmbb_to_vxvyvz[F: np.float64, S: tuple[Any, ...]](
+def vrpmllpmbb_to_vxvyvz[F: np.floating, S: tuple[Any, ...]](
     vr: onp.ArrayND[F, S],
     pmll: onp.ArrayND[F, S],
     pmbb: onp.ArrayND[F, S],
@@ -59,10 +59,19 @@ def vrpmllpmbb_to_vxvyvz[F: np.float64, S: tuple[Any, ...]](
     """
     longitude_velocity = cast("onp.ArrayND[np.float64, S]", distance * pmll * MAS_PER_YR_TO_KM_PER_S_PER_KPC)
     latitude_velocity = cast("onp.ArrayND[np.float64, S]", distance * pmbb * MAS_PER_YR_TO_KM_PER_S_PER_KPC)
-    return spherical_velocity_to_cartesian(vr, longitude_velocity, latitude_velocity, lon, lat)
+    vr_cast = vr.astype(np.float64)
+    lon_cast = lon.astype(np.float64)
+    lat_cast = lat.astype(np.float64)
+    return spherical_velocity_to_cartesian(
+        vr_cast,
+        longitude_velocity,
+        latitude_velocity,
+        lon_cast,
+        lat_cast,
+    )
 
 
-def vxvyvz_to_vrpmllpmbb[F: np.float64, S: tuple[Any, ...]](
+def vxvyvz_to_vrpmllpmbb[F: np.floating, S: tuple[Any, ...]](
     vx: onp.ArrayND[F, S],
     vy: onp.ArrayND[F, S],
     vz: onp.ArrayND[F, S],
