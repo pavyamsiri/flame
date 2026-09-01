@@ -49,7 +49,11 @@ convention = "numpy"
 
 [dependency-groups]
 dev = [
+    "basedmypy>=2.10.0",
+    "basedpyright>=1.39.10",
     "galpy>=1.11.1",
     "hypothesis[numpy]>=6.145.1",
+    "pyrefly>=1.2.0",
     "pytest>=8.4.2",
+    "ty>=0.0.77",
 ]
