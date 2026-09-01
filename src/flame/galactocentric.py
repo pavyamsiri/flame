@@ -30,7 +30,12 @@ from flame._galactocentric import AffineTransforms
 from flame.numpy.galactocentric import NumpyGalactocentricAdapter
 from flame.polars.galactocentric import PolarsGalactocentricAdapter
 
-__all__: list[str] = ["GalactocentricFrame", "default_galactocentric_frame", "galpy_compatible_frame"]
+__all__: list[str] = [
+    "AffineTransforms",
+    "GalactocentricFrame",
+    "default_galactocentric_frame",
+    "galpy_compatible_frame",
+]
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -217,6 +222,18 @@ class GalactocentricFrame:
 
         """
         return self._handedness
+
+    @property
+    def transforms(self) -> AffineTransforms:
+        """Return the read-only affine transforms used by this frame.
+
+        Returns
+        -------
+        AffineTransforms
+            Cached forward and inverse position and velocity transforms.
+
+        """
+        return self._transforms
 
     @property
     def sun_position(self) -> tuple[float, float, float]:

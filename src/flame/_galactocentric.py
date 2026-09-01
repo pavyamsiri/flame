@@ -14,6 +14,8 @@ __all__: list[str] = ["AffineTransforms"]
 
 @dataclass(frozen=True, slots=True)
 class AffineTransforms:
+    """Read-only affine matrices and translations for a Galactocentric frame."""
+
     pos_matrix: onp.Array2D[np.float64]
     pos_translation: onp.Array2D[np.float64]
     pos_matrix_inv: onp.Array2D[np.float64]

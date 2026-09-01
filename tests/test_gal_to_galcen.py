@@ -89,18 +89,18 @@ def test_handedness_changes_the_galactocentric_y_axis() -> None:
     np.testing.assert_allclose(left[0], right[0])
     np.testing.assert_allclose(left[1] - frame.sun_y(), -(right[1] - frame.sun_y()))
     np.testing.assert_allclose(left[2], right[2])
-    np.testing.assert_allclose(np.linalg.det(right_frame._transforms.pos_matrix), 1.0, atol=1e-10)
+    np.testing.assert_allclose(np.linalg.det(right_frame.transforms.pos_matrix), 1.0, atol=1e-10)
 
 
 def test_cached_transforms_are_not_mutable() -> None:
     frame = GalactocentricFrame()
 
     with pytest.raises(AttributeError):
-        frame.transforms = frame._transforms
+        setattr(frame, "transforms", frame.transforms)
     with pytest.raises(FrozenInstanceError):
-        frame.numpy._transforms = frame._transforms
+        setattr(frame.numpy, "_transforms", object())
     with pytest.raises(ValueError):
-        frame._transforms.pos_matrix[0, 0] = 0.0
+        frame.transforms.pos_matrix[0, 0] = 0.0
 
 
 def test_frame_metadata_presets_and_validation() -> None:
@@ -163,7 +163,7 @@ def test_phase_space_from_icrs() -> None:
 @given(frame=random_frame(), handedness=st.sampled_from(["right", "left"]))
 def test_handedness_orientation_invariants(frame: GalactocentricFrame, handedness: Literal["right", "left"]) -> None:
     frame = with_handedness(frame, handedness)
-    matrix = frame._transforms.pos_matrix
+    matrix = frame.transforms.pos_matrix
     expected_determinant = 1.0 if handedness == "right" else -1.0
 
     np.testing.assert_allclose(matrix.T @ matrix, np.eye(3), atol=1e-10)
