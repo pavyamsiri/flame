@@ -22,7 +22,7 @@ return lazy expressions.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Final, override
+from typing import TYPE_CHECKING, Final, TypeGuard, override
 
 import numpy as np
 
@@ -42,6 +42,8 @@ if TYPE_CHECKING:
     from typing import Literal
 
     from optype import numpy as onp
+
+type _Handedness = Literal["left", "right"]
 
 DEFAULT_SUN_X: Final[float] = -8.122
 DEFAULT_SUN_Y: Final[float] = 0
@@ -81,6 +83,31 @@ _LEFT_HANDED_ORIENTATION: Final[onp.Array2D[np.float64]] = np.array(
 )
 
 
+def _is_handedness(value: str) -> TypeGuard[_Handedness]:
+    """Check handedness is `left` or `right`."""
+    return value in ("left", "right")
+
+
+def _validate_handedness(value: str) -> _Handedness:
+    """Validate handedness is `left` or `right`.
+
+    Parameters
+    ----------
+    value : str
+        The handedness string.
+
+    Returns
+    -------
+    "left" or "right"
+        The validated handedness.
+
+    """
+    if not _is_handedness(value):
+        msg = f"Handedness must be either `left` or `right` not {value}."
+        raise TypeError(msg)
+    return value
+
+
 class GalactocentricFrame:
     """Definition of the Galactocentric frame."""
 
@@ -108,9 +135,6 @@ class GalactocentricFrame:
         *,
         handedness: Literal["left", "right"] = "right",
     ) -> None:
-        if handedness not in ("left", "right"):
-            msg = "handedness must be either 'left' or 'right'"
-            raise ValueError(msg)
         parameters = (sun_x, sun_y, sun_z, sun_vx, sun_vy, sun_vz)
         if not all(np.isfinite(parameter) for parameter in parameters):
             msg = "Solar position and velocity parameters must be finite"
@@ -121,7 +145,7 @@ class GalactocentricFrame:
         self._sun_vx: float = sun_vx
         self._sun_vy: float = sun_vy
         self._sun_vz: float = sun_vz
-        self._handedness: Literal["left", "right"] = handedness
+        self._handedness: Literal["left", "right"] = _validate_handedness(handedness)
 
         self._transforms: AffineTransforms = GalactocentricFrame._compute_affine_transform(
             self._sun_x,
