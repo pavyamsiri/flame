@@ -74,6 +74,25 @@ def vxvyvz_to_vrpmllpmbb[F: np.float64, S: tuple[Any, ...]](
 
     Proper motions are undefined at zero distance; those output entries are
     ``nan`` or infinite following NumPy division semantics.
+
+    Parameters
+    ----------
+    vx, vy, vz : Array[float]
+        Galactic Cartesian velocity components in km/s.
+    lon, lat : AngleArray[float]
+        Galactic longitude and latitude.
+    distance : Array[float]
+        Distance in kpc.
+
+    Returns
+    -------
+    vr : Array[float]
+        Line-of-sight velocity in km/s.
+    pmll : Array[float]
+        Proper motion in Galactic longitude, corrected by cos(b), in mas/yr.
+    pmbb : Array[float]
+        Proper motion in Galactic latitude in mas/yr.
+
     """
     vr, longitude_velocity, latitude_velocity = cartesian_velocity_to_spherical(vx, vy, vz, lon, lat)
     scale = distance * MAS_PER_YR_TO_KM_PER_S_PER_KPC

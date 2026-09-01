@@ -192,7 +192,14 @@ class GalactocentricFrame:
         )
 
     def __repr__(self) -> str:
-        """Return a reconstructible representation of the frame parameters."""
+        """Return a reconstructible representation of the frame parameters.
+
+        Returns
+        -------
+        str
+            Representation that can be used to recreate this frame.
+
+        """
         class_name = self.__class__.__name__
         return (
             f"{class_name}(sun_x={self._sun_x}, sun_y={self._sun_y}, sun_z={self._sun_z}, "
@@ -201,57 +208,148 @@ class GalactocentricFrame:
 
     @property
     def handedness(self) -> Literal["left", "right"]:
-        """Whether the Galactocentric Cartesian axes are left- or right-handed."""
+        """Return the handedness of the Galactocentric Cartesian axes.
+
+        Returns
+        -------
+        {"left", "right"}
+            Axis handedness.
+
+        """
         return self._handedness
 
     @property
     def sun_position(self) -> tuple[float, float, float]:
-        """Solar Galactocentric position ``(x, y, z)`` in kpc."""
+        """Return the Solar Galactocentric position.
+
+        Returns
+        -------
+        tuple of float
+            Solar ``(x, y, z)`` position in kpc.
+
+        """
         return (self._sun_x, self._sun_y, self._sun_z)
 
     @property
     def sun_velocity(self) -> tuple[float, float, float]:
-        """Solar Galactocentric velocity ``(vx, vy, vz)`` in km/s."""
+        """Return the Solar Galactocentric velocity.
+
+        Returns
+        -------
+        tuple of float
+            Solar ``(vx, vy, vz)`` velocity in km/s.
+
+        """
         return (self._sun_vx, self._sun_vy, self._sun_vz)
 
     def sun_x(self) -> float:
-        """Return the Solar Galactocentric x coordinate in kpc."""
+        """Return the Solar Galactocentric x coordinate.
+
+        Returns
+        -------
+        float
+            Solar x coordinate in kpc.
+
+        """
         return self._sun_x
 
     def sun_y(self) -> float:
-        """Return the Solar Galactocentric y coordinate in kpc."""
+        """Return the Solar Galactocentric y coordinate.
+
+        Returns
+        -------
+        float
+            Solar y coordinate in kpc.
+
+        """
         return self._sun_y
 
     def sun_z(self) -> float:
-        """Return the Solar Galactocentric z coordinate in kpc."""
+        """Return the Solar Galactocentric z coordinate.
+
+        Returns
+        -------
+        float
+            Solar z coordinate in kpc.
+
+        """
         return self._sun_z
 
     def sun_vx(self) -> float:
-        """Return the Solar Galactocentric x velocity in km/s."""
+        """Return the Solar Galactocentric x velocity.
+
+        Returns
+        -------
+        float
+            Solar x velocity in km/s.
+
+        """
         return self._sun_vx
 
     def sun_vy(self) -> float:
-        """Return the Solar Galactocentric y velocity in km/s."""
+        """Return the Solar Galactocentric y velocity.
+
+        Returns
+        -------
+        float
+            Solar y velocity in km/s.
+
+        """
         return self._sun_vy
 
     def sun_vz(self) -> float:
-        """Return the Solar Galactocentric z velocity in km/s."""
+        """Return the Solar Galactocentric z velocity.
+
+        Returns
+        -------
+        float
+            Solar z velocity in km/s.
+
+        """
         return self._sun_vz
 
     def distance_to_gc(self) -> float:
-        """Return the three-dimensional Solar distance from the Galactic centre in kpc."""
+        """Return the three-dimensional Solar distance from the Galactic centre.
+
+        Returns
+        -------
+        float
+            Solar distance in kpc.
+
+        """
         return np.sqrt(self._sun_x**2 + self._sun_y**2 + self._sun_z**2)
 
     def sun_rxy(self) -> float:
-        """Return the Solar cylindrical distance from the Galactic centre in kpc."""
+        """Return the Solar cylindrical distance from the Galactic centre.
+
+        Returns
+        -------
+        float
+            Solar cylindrical distance in kpc.
+
+        """
         return np.sqrt(self._sun_x**2 + self._sun_y**2)
 
 
 def default_galactocentric_frame() -> GalactocentricFrame:
-    """Create a package-default right-handed Galactocentric frame."""
+    """Create the package-default right-handed Galactocentric frame.
+
+    Returns
+    -------
+    GalactocentricFrame
+        Frame with the package-default Solar parameters.
+
+    """
     return GalactocentricFrame()
 
 
 def galpy_compatible_frame() -> GalactocentricFrame:
-    """Create a left-handed frame with the default Solar parameters and galpy's axis orientation."""
+    """Create a Galactocentric frame compatible with galpy's axis orientation.
+
+    Returns
+    -------
+    GalactocentricFrame
+        Left-handed frame with the package-default Solar parameters.
+
+    """
     return GalactocentricFrame(handedness="left")

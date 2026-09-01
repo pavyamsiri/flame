@@ -69,11 +69,30 @@ def cartesian_to_spherical[F: np.float64, S: tuple[Any, ...]](
 
     Longitudes are wrapped to ``[0, 2 * pi)``. At the origin the direction is
     undefined; this function returns longitude and latitude equal to zero.
+
+    Parameters
+    ----------
+    x : Array[float]
+        The x coordinate.
+    y : Array[float]
+        The y coordinate.
+    z : Array[float]
+        The z coordinate.
+
+    Returns
+    -------
+    lon : AngleArray[f64]
+        The longitude.
+    lat : AngleArray[f64]
+        The latitude.
+    distance : Array[f64]
+        The distance.
+
     """
     rxy = np.hypot(x, y)
     distance = cast("onp.ArrayND[np.float64, S]", np.hypot(rxy, z).astype(np.float64))
-    lon = np.mod(np.arctan2(y, x), 2 * np.pi)
-    lat = np.arctan2(z, rxy)
+    lon: onp.ArrayND[np.float64, S] = cast("onp.ArrayND[np.float64, S]", np.mod(np.arctan2(y, x), 2 * np.pi).astype(np.float64))
+    lat: onp.ArrayND[np.float64, S] = cast("onp.ArrayND[np.float64, S]", np.arctan2(z, rxy).astype(np.float64))
     return (AngleArray(lon, "rad"), AngleArray(lat, "rad"), distance)
 
 
@@ -88,6 +107,29 @@ def spherical_velocity_to_cartesian[F: np.float64, S: tuple[Any, ...]](
 
     ``longitude_velocity`` and ``latitude_velocity`` are tangential velocities
     in the directions of increasing longitude and latitude, respectively.
+
+    Parameters
+    ----------
+    vr : Array[float]
+        The radial velocity.
+    longitude_velocity : Array[float]
+        The longitude velocity.
+    latitude_velocity : Array[float]
+        The latitude velocity.
+    lon : AngleArray[float]
+        The longitude.
+    lat : AngleArray[float]
+        The latitude.
+
+    Returns
+    -------
+    vx : Array[f64]
+        The x velocity.
+    vy : Array[f64]
+        The y velocity.
+    vz : Array[f64]
+        The z velocity.
+
     """
     lon_radians = lon.to_radians()
     lat_radians = lat.to_radians()
@@ -119,6 +161,23 @@ def cartesian_velocity_to_spherical[F: np.float64, S: tuple[Any, ...]](
 
     The returned tangential components point toward increasing longitude and
     latitude. At a pole, the longitude direction is convention-dependent.
+
+    Parameters
+    ----------
+    vx, vy, vz : Array[float]
+        Cartesian velocity components.
+    lon, lat : AngleArray[float]
+        Longitude and latitude defining the local spherical basis.
+
+    Returns
+    -------
+    vr : Array[float]
+        Radial velocity.
+    longitude_velocity : Array[float]
+        Tangential velocity toward increasing longitude.
+    latitude_velocity : Array[float]
+        Tangential velocity toward increasing latitude.
+
     """
     lon_radians = lon.to_radians()
     lat_radians = lat.to_radians()
@@ -128,9 +187,7 @@ def cartesian_velocity_to_spherical[F: np.float64, S: tuple[Any, ...]](
     cosb = np.cos(lat_radians)
     vr = cast("onp.ArrayND[np.float64, S]", (vx * cosl * cosb + vy * sinl * cosb + vz * sinb).astype(np.float64))
     longitude_velocity = cast("onp.ArrayND[np.float64, S]", (-vx * sinl + vy * cosl).astype(np.float64))
-    latitude_velocity = cast(
-        "onp.ArrayND[np.float64, S]", (-vx * cosl * sinb - vy * sinl * sinb + vz * cosb).astype(np.float64)
-    )
+    latitude_velocity = cast("onp.ArrayND[np.float64, S]", (-vx * cosl * sinb - vy * sinl * sinb + vz * cosb).astype(np.float64))
     return (vr, longitude_velocity, latitude_velocity)
 
 
@@ -198,16 +255,49 @@ def cartesian_to_cylindrical[F: np.float64, S: tuple[Any, ...]](
 
     ``phi`` is wrapped to ``[0, 2 * pi)``. Its value at the z axis is defined as
     zero because the azimuth is otherwise undefined.
+
+    Parameters
+    ----------
+    x, y, z : Array[float]
+        Cartesian coordinates.
+
+    Returns
+    -------
+    radius : Array[float]
+        Cylindrical radius.
+    phi : AngleArray[float]
+        Azimuthal angle in radians.
+    z : Array[float]
+        Vertical coordinate.
+
     """
     radius, phi = cartesian_to_polar(x, y)
-    phi_radians = np.mod(phi.to_radians(), 2 * np.pi)
+    phi_radians: onp.ArrayND[np.float64, S] = cast(
+        "onp.ArrayND[np.float64, S]", np.mod(phi.to_radians(), 2 * np.pi).astype(np.float64)
+    )
     return (radius, AngleArray(phi_radians, "rad"), z)
 
 
 def cylindrical_to_cartesian[F: np.float64, S: tuple[Any, ...]](
     radius: onp.ArrayND[F, S], phi: AngleArray[F, S], z: onp.ArrayND[F, S]
 ) -> tuple[onp.ArrayND[np.float64, S], onp.ArrayND[np.float64, S], onp.ArrayND[F, S]]:
-    """Transform cylindrical ``(radius, phi, z)`` coordinates to Cartesian coordinates."""
+    """Transform cylindrical ``(radius, phi, z)`` coordinates to Cartesian coordinates.
+
+    Parameters
+    ----------
+    radius : Array[float]
+        Cylindrical radius.
+    phi : AngleArray[float]
+        Azimuthal angle.
+    z : Array[float]
+        Vertical coordinate.
+
+    Returns
+    -------
+    x, y, z : Array[float]
+        Cartesian coordinates.
+
+    """
     phi_radians = phi.to_radians()
     x = cast("onp.ArrayND[np.float64, S]", (radius * np.cos(phi_radians)).astype(np.float64))
     y = cast("onp.ArrayND[np.float64, S]", (radius * np.sin(phi_radians)).astype(np.float64))
@@ -221,6 +311,23 @@ def cartesian_velocity_to_cylindrical[F: np.float64, S: tuple[Any, ...]](
 
     Positive ``v_phi`` is toward increasing ``phi``: counter-clockwise from
     the positive x axis toward the positive y axis in a right-handed frame.
+
+    Parameters
+    ----------
+    vx, vy, vz : Array[float]
+        Cartesian velocity components.
+    phi : AngleArray[float]
+        Azimuthal angle defining the cylindrical basis.
+
+    Returns
+    -------
+    v_radius : Array[float]
+        Radial velocity component.
+    v_phi : Array[float]
+        Azimuthal velocity component.
+    vz : Array[float]
+        Vertical velocity component.
+
     """
     v_radius, v_phi = cartesian_vec_to_polar_vec(vx, vy, phi)
     return (v_radius, v_phi, vz)
@@ -229,7 +336,25 @@ def cartesian_velocity_to_cylindrical[F: np.float64, S: tuple[Any, ...]](
 def cylindrical_velocity_to_cartesian[F: np.float64, S: tuple[Any, ...]](
     v_radius: onp.ArrayND[F, S], v_phi: onp.ArrayND[F, S], vz: onp.ArrayND[F, S], phi: AngleArray[F, S]
 ) -> tuple[onp.ArrayND[np.float64, S], onp.ArrayND[np.float64, S], onp.ArrayND[F, S]]:
-    """Transform cylindrical ``(v_radius, v_phi, v_z)`` velocities to Cartesian velocities."""
+    """Transform cylindrical ``(v_radius, v_phi, v_z)`` velocities to Cartesian velocities.
+
+    Parameters
+    ----------
+    v_radius : Array[float]
+        Radial velocity component.
+    v_phi : Array[float]
+        Azimuthal velocity component.
+    vz : Array[float]
+        Vertical velocity component.
+    phi : AngleArray[float]
+        Azimuthal angle defining the cylindrical basis.
+
+    Returns
+    -------
+    vx, vy, vz : Array[float]
+        Cartesian velocity components.
+
+    """
     phi_radians = phi.to_radians()
     vx = cast("onp.ArrayND[np.float64, S]", (v_radius * np.cos(phi_radians) - v_phi * np.sin(phi_radians)).astype(np.float64))
     vy = cast("onp.ArrayND[np.float64, S]", (v_radius * np.sin(phi_radians) + v_phi * np.cos(phi_radians)).astype(np.float64))

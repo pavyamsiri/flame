@@ -19,11 +19,30 @@ class AngleExpr:
         self.units: Literal["deg", "rad"] = units
 
     def alias(self, name: str) -> AngleExpr:
-        """Return an equivalent expression with ``name`` as its output column name."""
+        """Return an equivalent expression with a new output column name.
+
+        Parameters
+        ----------
+        name : str
+            Output column name.
+
+        Returns
+        -------
+        AngleExpr
+            Expression with the specified alias and the same angular unit.
+
+        """
         return AngleExpr(self.data.alias(name), units=self.units)
 
     def to_radians(self) -> pl.Expr:
-        """Return the underlying expression converted to radians."""
+        """Return the underlying expression converted to radians.
+
+        Returns
+        -------
+        pl.Expr
+            Expression whose values are in radians.
+
+        """
         match self.units:
             case "deg":
                 return self.data.radians()
@@ -31,7 +50,14 @@ class AngleExpr:
                 return self.data
 
     def to_degrees(self) -> pl.Expr:
-        """Return the underlying expression converted to degrees."""
+        """Return the underlying expression converted to degrees.
+
+        Returns
+        -------
+        pl.Expr
+            Expression whose values are in degrees.
+
+        """
         match self.units:
             case "deg":
                 return self.data
@@ -47,7 +73,14 @@ class AngleArray[F: np.float64, S: tuple[Any, ...]]:
         self.units: Literal["deg", "rad"] = units
 
     def to_radians(self) -> onp.ArrayND[np.float64, S]:
-        """Return the underlying array converted to radians with ``float64`` precision."""
+        """Return the underlying array converted to radians with ``float64`` precision.
+
+        Returns
+        -------
+        Array[float64]
+            Array whose values are in radians.
+
+        """
         match self.units:
             case "deg":
                 return cast("onp.ArrayND[np.float64, S]", np.radians(self.data).astype(np.float64))
@@ -55,7 +88,14 @@ class AngleArray[F: np.float64, S: tuple[Any, ...]]:
                 return self.data.astype(np.float64)
 
     def to_degrees(self) -> onp.ArrayND[np.float64, S]:
-        """Return the underlying array converted to degrees with ``float64`` precision."""
+        """Return the underlying array converted to degrees with ``float64`` precision.
+
+        Returns
+        -------
+        Array[float64]
+            Array whose values are in degrees.
+
+        """
         match self.units:
             case "deg":
                 return self.data.astype(np.float64)

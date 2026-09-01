@@ -67,6 +67,25 @@ def vxvyvz_to_vrpmllpmbb(
 
     Proper motions are undefined at zero distance; the corresponding Polars
     expressions evaluate according to its floating-point division semantics.
+
+    Parameters
+    ----------
+    vx, vy, vz : pl.Expr
+        Galactic Cartesian velocity components in km/s.
+    lon, lat : AngleExpr
+        Galactic longitude and latitude.
+    distance : pl.Expr
+        Distance in kpc.
+
+    Returns
+    -------
+    vr : pl.Expr
+        Line-of-sight velocity in km/s.
+    pmll : pl.Expr
+        Proper motion in Galactic longitude, corrected by cos(b), in mas/yr.
+    pmbb : pl.Expr
+        Proper motion in Galactic latitude in mas/yr.
+
     """
     vr, longitude_velocity, latitude_velocity = cartesian_velocity_to_spherical(vx, vy, vz, lon, lat)
     scale = distance * MAS_PER_YR_TO_KM_PER_S_PER_KPC

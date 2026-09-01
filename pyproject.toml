@@ -39,7 +39,7 @@ reportArgumentType = false
 line-length = 130
 
 [tool.ruff.lint]
-extend-select = ["D", "I", "RUF", "TC"]
+extend-select = ["D", "D413", "I", "RUF", "TC"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"

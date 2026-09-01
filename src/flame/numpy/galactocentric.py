@@ -60,15 +60,15 @@ class NumpyGalactocentricAdapter:
     def position_to_galactic[F: np.float64, S: tuple[Any, ...]](
         self, gc_x: onp.ArrayND[F, S], gc_y: onp.ArrayND[F, S], gc_z: onp.ArrayND[F, S]
     ) -> tuple[onp.ArrayND[np.float64, S], onp.ArrayND[np.float64, S], onp.ArrayND[np.float64, S]]:
-        """Transform Cartesian coordinates in the Galactocentic frame to the Galactic frame.
+        """Transform Cartesian coordinates in the Galactocentric frame to the Galactic frame.
 
         Parameters
         ----------
-        x : Array[float]
+        gc_x : Array[float]
             The x coordinate in the Galactocentric frame.
-        y : Array[float]
+        gc_y : Array[float]
             The y coordinate in the Galactocentric frame.
-        z : Array[float]
+        gc_z : Array[float]
             The z coordinate in the Galactocentric frame.
 
         Returns
@@ -99,11 +99,11 @@ class NumpyGalactocentricAdapter:
 
         Parameters
         ----------
-        vx : Array[float]
+        v_u : Array[float]
             The x-velocity in the Galactic frame.
-        vy : Array[float]
+        v_v : Array[float]
             The y-velocity in the Galactic frame.
-        vz : Array[float]
+        v_w : Array[float]
             The z-velocity in the Galactic frame.
 
         Returns

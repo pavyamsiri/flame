@@ -73,6 +73,7 @@ class PolarsGalactocentricAdapter:
             The y coordinate in the Galactic frame.
         gl_z : pl.Expr
             The z coordinate in the Galactic frame.
+
         """
         transform = self._transforms.pos_matrix_inv
         translation = self._transforms.pos_translation_inv
@@ -88,11 +89,11 @@ class PolarsGalactocentricAdapter:
 
         Parameters
         ----------
-        vx : pl.Expr
+        v_u : pl.Expr
             The x-velocity in the Galactic frame.
-        vy : pl.Expr
+        v_v : pl.Expr
             The y-velocity in the Galactic frame.
-        vz : pl.Expr
+        v_w : pl.Expr
             The z-velocity in the Galactic frame.
 
         Returns

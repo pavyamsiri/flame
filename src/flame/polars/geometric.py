@@ -61,6 +61,21 @@ def cartesian_to_spherical(x: pl.Expr, y: pl.Expr, z: pl.Expr) -> tuple[AngleExp
 
     Longitudes are wrapped to ``[0, 2 * pi)``. At the origin the direction is
     undefined; Polars' ``arctan2(0, 0)`` convention yields zero angles.
+
+    Parameters
+    ----------
+    x, y, z : pl.Expr
+        Cartesian coordinates.
+
+    Returns
+    -------
+    lon : AngleExpr
+        Longitude in radians.
+    lat : AngleExpr
+        Latitude in radians.
+    distance : pl.Expr
+        Distance from the origin.
+
     """
     rxy = (x**2 + y**2).sqrt()
     distance = (rxy**2 + z**2).sqrt()
@@ -80,6 +95,23 @@ def spherical_velocity_to_cartesian(
 
     ``longitude_velocity`` and ``latitude_velocity`` are tangential velocities
     in the directions of increasing longitude and latitude, respectively.
+
+    Parameters
+    ----------
+    vr : pl.Expr
+        Radial velocity.
+    longitude_velocity : pl.Expr
+        Tangential velocity toward increasing longitude.
+    latitude_velocity : pl.Expr
+        Tangential velocity toward increasing latitude.
+    lon, lat : AngleExpr
+        Longitude and latitude defining the local spherical basis.
+
+    Returns
+    -------
+    vx, vy, vz : pl.Expr
+        Cartesian velocity components.
+
     """
     lon_radians = lon.to_radians()
     lat_radians = lat.to_radians()
@@ -101,6 +133,23 @@ def cartesian_velocity_to_spherical(
 
     The returned tangential components point toward increasing longitude and
     latitude. At a pole, the longitude direction is convention-dependent.
+
+    Parameters
+    ----------
+    vx, vy, vz : pl.Expr
+        Cartesian velocity components.
+    lon, lat : AngleExpr
+        Longitude and latitude defining the local spherical basis.
+
+    Returns
+    -------
+    vr : pl.Expr
+        Radial velocity.
+    longitude_velocity : pl.Expr
+        Tangential velocity toward increasing longitude.
+    latitude_velocity : pl.Expr
+        Tangential velocity toward increasing latitude.
+
     """
     lon_radians = lon.to_radians()
     lat_radians = lat.to_radians()
@@ -172,13 +221,44 @@ def cartesian_to_cylindrical(x: pl.Expr, y: pl.Expr, z: pl.Expr) -> tuple[pl.Exp
 
     ``phi`` is wrapped to ``[0, 2 * pi)``. Its value at the z axis is defined as
     zero because the azimuth is otherwise undefined.
+
+    Parameters
+    ----------
+    x, y, z : pl.Expr
+        Cartesian coordinates.
+
+    Returns
+    -------
+    radius : pl.Expr
+        Cylindrical radius.
+    phi : AngleExpr
+        Azimuthal angle in radians.
+    z : pl.Expr
+        Vertical coordinate.
+
     """
     radius, phi = cartesian_to_polar(x, y)
     return (radius, AngleExpr(phi.to_radians() % (2 * np.pi), "rad"), z)
 
 
 def cylindrical_to_cartesian(radius: pl.Expr, phi: AngleExpr, z: pl.Expr) -> tuple[pl.Expr, pl.Expr, pl.Expr]:
-    """Transform cylindrical ``(radius, phi, z)`` coordinates to Cartesian coordinates."""
+    """Transform cylindrical ``(radius, phi, z)`` coordinates to Cartesian coordinates.
+
+    Parameters
+    ----------
+    radius : pl.Expr
+        Cylindrical radius.
+    phi : AngleExpr
+        Azimuthal angle.
+    z : pl.Expr
+        Vertical coordinate.
+
+    Returns
+    -------
+    x, y, z : pl.Expr
+        Cartesian coordinates.
+
+    """
     phi_radians = phi.to_radians()
     return (radius * phi_radians.cos(), radius * phi_radians.sin(), z)
 
@@ -190,6 +270,23 @@ def cartesian_velocity_to_cylindrical(
 
     Positive ``v_phi`` is toward increasing ``phi``: counter-clockwise from
     the positive x axis toward the positive y axis in a right-handed frame.
+
+    Parameters
+    ----------
+    vx, vy, vz : pl.Expr
+        Cartesian velocity components.
+    phi : AngleExpr
+        Azimuthal angle defining the cylindrical basis.
+
+    Returns
+    -------
+    v_radius : pl.Expr
+        Radial velocity component.
+    v_phi : pl.Expr
+        Azimuthal velocity component.
+    vz : pl.Expr
+        Vertical velocity component.
+
     """
     v_radius, v_phi = cartesian_vec_to_polar_vec(vx, vy, phi)
     return (v_radius, v_phi, vz)
@@ -198,7 +295,25 @@ def cartesian_velocity_to_cylindrical(
 def cylindrical_velocity_to_cartesian(
     v_radius: pl.Expr, v_phi: pl.Expr, vz: pl.Expr, phi: AngleExpr
 ) -> tuple[pl.Expr, pl.Expr, pl.Expr]:
-    """Transform cylindrical ``(v_radius, v_phi, v_z)`` velocities to Cartesian velocities."""
+    """Transform cylindrical ``(v_radius, v_phi, v_z)`` velocities to Cartesian velocities.
+
+    Parameters
+    ----------
+    v_radius : pl.Expr
+        Radial velocity component.
+    v_phi : pl.Expr
+        Azimuthal velocity component.
+    vz : pl.Expr
+        Vertical velocity component.
+    phi : AngleExpr
+        Azimuthal angle defining the cylindrical basis.
+
+    Returns
+    -------
+    vx, vy, vz : pl.Expr
+        Cartesian velocity components.
+
+    """
     phi_radians = phi.to_radians()
     return (
         v_radius * phi_radians.cos() - v_phi * phi_radians.sin(),
