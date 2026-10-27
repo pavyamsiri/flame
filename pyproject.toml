@@ -65,6 +65,7 @@ infer-with-first-use = false
 
 [dependency-groups]
 dev = [
+    "astropy>=8.0.2",
     "basedmypy>=2.10.0",
     "basedpyright>=1.39.10",
     "galpy>=1.11.1",

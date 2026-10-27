@@ -7,6 +7,7 @@ from .galactocentric import (
     astropy_compatible_frame,
     default_galactocentric_frame,
     galpy_compatible_frame,
+    gravity2022_frame,
 )
 
 __all__: list[str] = [
@@ -16,6 +17,7 @@ __all__: list[str] = [
     "default_galactocentric_frame",
     "galactocentric",
     "galpy_compatible_frame",
+    "gravity2022_frame",
     "numpy",
     "polars",
 ]

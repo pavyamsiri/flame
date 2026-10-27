@@ -17,6 +17,11 @@ frame = GalactocentricFrame(handedness="right", prograde_lz_positive=True)
 print(frame)  # Includes handedness, prograde Lz sign, and the +z direction.
 ```
 
+For the Gravity Collaboration (2022) distance and Solar velocity convention,
+use `gravity2022_frame()`. It uses `d_sun=8.277` kpc as the three-dimensional
+Sun--GC distance, `z_sun=20.8` pc, and
+`(V_R, V_phi, V_z)=(-11.1,-251.5,+8.6)` km/s.
+
 | Convention | Handedness | Prograde Lz | Solar x | +z |
 |---|---|---|---|---|
 | Package default | Right | Positive | Negative | South |

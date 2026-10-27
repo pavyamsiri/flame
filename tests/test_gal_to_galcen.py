@@ -7,7 +7,7 @@ import numpy as np
 import polars as pl
 import pytest
 from galpy.util import coords as galcoords  # pyright: ignore[reportMissingTypeStubs]
-from hypothesis import assume, given
+from hypothesis import assume, given, settings
 from hypothesis import strategies as st
 
 from flame.galactocentric import (
@@ -16,6 +16,7 @@ from flame.galactocentric import (
     astropy_compatible_frame,
     default_galactocentric_frame,
     galpy_compatible_frame,
+    gravity2022_frame,
 )
 from flame.numpy.icrs import icrs_to_galactic_cartesian as icrs_to_galactic_cartesian_numpy
 from flame.numpy.icrs import icrs_to_galactic_velocity as icrs_to_galactic_velocity_numpy
@@ -693,3 +694,61 @@ def test_presets_share_observed_phase_space() -> None:
 def test_invalid_prograde_sign() -> None:
     with pytest.raises(TypeError, match="prograde_lz_positive"):
         GalactocentricFrame(prograde_lz_positive="positive")  # type: ignore[arg-type]
+
+
+def test_gravity2022_frame_matches_astropy() -> None:
+    coordinates = pytest.importorskip("astropy.coordinates")
+    units = pytest.importorskip("astropy.units")
+
+    frame = gravity2022_frame()
+    assert frame.sun_position == pytest.approx((-np.sqrt(8.277**2 - 0.0208**2), 0.0, 0.0208))
+    assert frame.sun_velocity == pytest.approx((11.1, 251.5, 8.6))
+    assert frame.handedness == "right"
+    assert frame.prograde_lz_positive is False
+
+    position = np.array([[1.0, 2.0, 3.0], [-4.0, 5.0, -6.0]]).T
+    velocity = np.array([[10.0, 20.0, 30.0], [-40.0, 50.0, -60.0]]).T
+    representation = coordinates.CartesianRepresentation(
+        position * units.kpc,
+        differentials=coordinates.CartesianDifferential(velocity * units.km / units.s),
+    )
+    astropy_frame = coordinates.Galactocentric(
+        galcen_distance=8.277 * units.kpc,
+        z_sun=0.0208 * units.kpc,
+        galcen_v_sun=coordinates.CartesianDifferential(np.array(frame.sun_velocity) * units.km / units.s),
+    )
+    expected = coordinates.Galactic(representation).transform_to(astropy_frame)
+
+    actual_position = np.array(frame.numpy.position_from_galactic(*position))
+    actual_velocity = np.array(frame.numpy.velocity_from_galactic(*velocity))
+    np.testing.assert_allclose(actual_position, expected.cartesian.xyz.to_value(units.kpc), atol=1e-8, rtol=0)
+    np.testing.assert_allclose(actual_velocity, expected.velocity.d_xyz.to_value(units.km / units.s), atol=1e-7, rtol=0)
+
+
+@settings(max_examples=20, deadline=None)
+@given(
+    position=st.lists(st.floats(min_value=-100.0, max_value=100.0, allow_nan=False, allow_infinity=False), min_size=3, max_size=3),
+    velocity=st.lists(st.floats(min_value=-500.0, max_value=500.0, allow_nan=False, allow_infinity=False), min_size=3, max_size=3),
+)
+def test_gravity2022_frame_matches_astropy_random(position: list[float], velocity: list[float]) -> None:
+    coordinates = pytest.importorskip("astropy.coordinates")
+    units = pytest.importorskip("astropy.units")
+
+    frame = gravity2022_frame()
+    position_array = np.asarray(position, dtype=np.float64)[:, None]
+    velocity_array = np.asarray(velocity, dtype=np.float64)[:, None]
+    representation = coordinates.CartesianRepresentation(
+        position_array * units.kpc,
+        differentials=coordinates.CartesianDifferential(velocity_array * units.km / units.s),
+    )
+    astropy_frame = coordinates.Galactocentric(
+        galcen_distance=8.277 * units.kpc,
+        z_sun=0.0208 * units.kpc,
+        galcen_v_sun=coordinates.CartesianDifferential(np.array(frame.sun_velocity) * units.km / units.s),
+    )
+    expected = coordinates.Galactic(representation).transform_to(astropy_frame)
+
+    actual_position = np.array(frame.numpy.position_from_galactic(*position_array))
+    actual_velocity = np.array(frame.numpy.velocity_from_galactic(*velocity_array))
+    np.testing.assert_allclose(actual_position, expected.cartesian.xyz.to_value(units.kpc), atol=1e-8, rtol=0)
+    np.testing.assert_allclose(actual_velocity, expected.velocity.d_xyz.to_value(units.km / units.s), atol=1e-7, rtol=0)

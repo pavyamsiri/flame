@@ -38,6 +38,7 @@ __all__: list[str] = [
     "astropy_compatible_frame",
     "default_galactocentric_frame",
     "galpy_compatible_frame",
+    "gravity2022_frame",
 ]
 
 if TYPE_CHECKING:
@@ -527,3 +528,32 @@ def astropy_compatible_frame() -> GalactocentricFrame:
 
     """
     return GalactocentricFrame(handedness="right", prograde_lz_positive=False)
+
+
+def gravity2022_frame() -> GalactocentricFrame:
+    """Create the right-handed frame described by the 2022 GC-distance model.
+
+    The Solar Galactocentric distance is 8.277 kpc, the Solar height is
+    20.8 pc, and the cylindrical Solar velocity is
+    ``(V_R, V_phi, V_z) = (-11.1, -251.5, 8.6)`` km/s. The distance is treated
+    as the three-dimensional Sun--GC distance, so the cylindrical radius is
+    computed as ``sqrt(8.277**2 - 0.0208**2)`` kpc.
+
+    Returns
+    -------
+    GalactocentricFrame
+        Right-handed, north-up frame with negative prograde Lz.
+
+    """
+    sun_distance = 8.277
+    sun_z = 0.0208
+    sun_radius = np.sqrt(sun_distance**2 - sun_z**2)
+    return GalactocentricFrame.from_cylindrical(
+        sun_radius=sun_radius,
+        sun_z=sun_z,
+        sun_v_radius=-11.1,
+        sun_v_phi=251.5,
+        sun_vz=8.6,
+        handedness="right",
+        prograde_lz_positive=False,
+    )
